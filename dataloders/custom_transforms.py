@@ -2,7 +2,7 @@ import torch, cv2
 
 import numpy.random as random
 import numpy as np
-from dataset import utils
+from dataloders import utils
 
 class FixedResize(object):
     """Resize the image and the ground truth to specified resolution.

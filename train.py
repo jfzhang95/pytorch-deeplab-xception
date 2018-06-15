@@ -26,7 +26,7 @@ from dataloders import custom_transforms as tr
 gpu_id = 0
 print('Using GPU: {} '.format(gpu_id))
 # Setting parameters
-nEpochs = 300  # Number of epochs for training
+nEpochs = 200  # Number of epochs for training
 resume_epoch = 0  # Default is 0, change if want to resume
 
 p = OrderedDict()  # Parameters to include in report
@@ -124,7 +124,7 @@ if resume_epoch != nEpochs:
             running_loss_tr += loss.item()
 
             # Print stuff
-            if ii % printInterval:
+            if ii % printInterval == 0:
                 running_loss_tr = running_loss_tr / num_img_tr
                 writer.add_scalar('data/total_loss_epoch', running_loss_tr, epoch)
                 print('[Epoch: %d, numImages: %5d]' % (epoch, ii * p['trainBatch'] + inputs.data.shape[0]))
@@ -168,7 +168,7 @@ if resume_epoch != nEpochs:
                 running_loss_ts += loss.item()
 
                 # Print stuff
-                if ii % printInterval:
+                if ii % printInterval == 0:
                     running_loss_ts = running_loss_ts / num_img_ts
                     print('[Epoch: %d, numImages: %5d]' % (epoch, ii * testBatch + inputs.data.shape[0]))
                     writer.add_scalar('data/test_loss_epoch', running_loss_ts, epoch)
