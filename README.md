@@ -1,7 +1,7 @@
 # pytorch-deeplab-xception
 
 ## Introduction
-This is a Pytorch implementation of [DeepLab-Xception](https://arxiv.org/pdf/1802.02611), It's based on a Modified Aligned Xception backbone.
+This is a Pytorch implementation of [DeepLab-Xception](https://arxiv.org/pdf/1802.02611), It's based on a Modified Aligned Xception backbone. We train DeepLab V3+ from scratch, using Pascal Voc 2012 dataset.
 
 ## Status
 In progress
@@ -23,7 +23,7 @@ To use this code, please do:
     cd pytorch-deeplab-xception
     ```
 
-1. We train DeepLabV3+ from scratch. To train DeepLabV3+, please do:
+1. To train DeepLabV3+, please do:
     ```Shell
     python train.py
     ```
