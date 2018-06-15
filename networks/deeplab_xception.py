@@ -67,6 +67,7 @@ class Block(nn.Module):
         x += skip
         return x
 
+
 class Xception(nn.Module):
     """
     Modified Alighed Xception
@@ -132,24 +133,22 @@ class Xception(nn.Module):
         x = self.block3(x)
 
         # Middle flow
-        for i in range(16):
-            x = self.block4(x)
-        # x = self.block4(x)
-        # x = self.block5(x)
-        # x = self.block6(x)
-        # x = self.block7(x)
-        # x = self.block8(x)
-        # x = self.block9(x)
-        # x = self.block10(x)
-        # x = self.block11(x)
-        # x = self.block12(x)
-        # x = self.block13(x)
-        # x = self.block14(x)
-        # x = self.block15(x)
-        # x = self.block16(x)
-        # x = self.block17(x)
-        # x = self.block18(x)
-        # x = self.block19(x)
+        x = self.block4(x)
+        x = self.block5(x)
+        x = self.block6(x)
+        x = self.block7(x)
+        x = self.block8(x)
+        x = self.block9(x)
+        x = self.block10(x)
+        x = self.block11(x)
+        x = self.block12(x)
+        x = self.block13(x)
+        x = self.block14(x)
+        x = self.block15(x)
+        x = self.block16(x)
+        x = self.block17(x)
+        x = self.block18(x)
+        x = self.block19(x)
 
         # Exit flow
         x = self.block20(x)
@@ -167,6 +166,7 @@ class Xception(nn.Module):
 
         return x, low_level_feat
 
+
 class ASPP_module(nn.Module):
     def __init__(self, inplanes, planes, rate):
         super(ASPP_module, self).__init__()
@@ -180,6 +180,7 @@ class ASPP_module(nn.Module):
 
         return x
 
+
 class DeepLabv3_plus(nn.Module):
     def __init__(self, nInputChannels=3, n_classes=21, _print=True):
         if _print:
@@ -187,6 +188,7 @@ class DeepLabv3_plus(nn.Module):
             print("Number of classes: {}".format(n_classes))
             print("Number of Input Channels: {}".format(nInputChannels))
         super(DeepLabv3_plus, self).__init__()
+
         # Atrous Conv
         self.xception_features = Xception(nInputChannels)
 
@@ -212,8 +214,10 @@ class DeepLabv3_plus(nn.Module):
                                        nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
                                        nn.BatchNorm2d(256),
                                        nn.Conv2d(256, n_classes, kernel_size=1, stride=1))
-
         # init weights
+        self._init_weight()
+
+    def _init_weight(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
@@ -249,3 +253,4 @@ class DeepLabv3_plus(nn.Module):
 
 if __name__ == "__main__":
     model = DeepLabv3_plus(nInputChannels=3, n_classes=21, _print=True)
+    print(model)

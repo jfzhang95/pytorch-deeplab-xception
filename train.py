@@ -4,6 +4,7 @@ from datetime import datetime
 import os
 import glob
 from collections import OrderedDict
+
 # PyTorch includes
 import torch
 from torch.autograd import Variable
@@ -16,10 +17,10 @@ from torch.nn.functional import upsample
 from tensorboardX import SummaryWriter
 
 # Custom includes
-from dataset import pascal
-from dataset.utils import cross_entropy2d, generate_param_report
+from dataloders import pascal
+from dataloders.utils import cross_entropy2d, generate_param_report
 from networks import deeplab_xception
-from dataset import custom_transforms as tr
+from dataloders import custom_transforms as tr
 
 
 gpu_id = 0
@@ -145,11 +146,11 @@ if resume_epoch != nEpochs:
                 aveGrad = 0
 
         # Save the model
-        if (epoch % snapshot) == snapshot - 1 or epoch == 0:
+        if (epoch % snapshot) == snapshot - 1:
             torch.save(net.state_dict(), os.path.join(save_dir, 'models', modelName + '_epoch-' + str(epoch) + '.pth'))
 
         # One testing epoch
-        if useTest and epoch % nTestInterval == (nTestInterval - 1) and epoch != 0:
+        if useTest and epoch % nTestInterval == (nTestInterval - 1):
             net.eval()
             for ii, sample_batched in enumerate(testloader):
                 inputs, gts = sample_batched['image'], sample_batched['gt']
