@@ -18,7 +18,7 @@ from tensorboardX import SummaryWriter
 
 # Custom includes
 from dataloders import pascal
-from dataloders.utils import cross_entropy2d, generate_param_report
+from dataloders import utils
 from networks import deeplab_xception
 from dataloders import custom_transforms as tr
 
@@ -34,13 +34,13 @@ p['trainBatch'] = 8  # Training batch size
 testBatch = 8  # Testing batch size
 useTest = True  # See evolution of the test set when training
 nTestInterval = 10  # Run on test set every nTestInterval epochs
-printInterval = 50  # print loss information every printInterval iters
 snapshot = 50  # Store a model every snapshot epochs
 zero_pad_crop = True  # Insert zero padding when cropping the image
 p['nAveGrad'] = 1  # Average the gradient of several iterations
-p['lr'] = 1e-8  # Learning rate
-p['wd'] = 0.0005  # Weight decay
+p['lr'] = 1e-4  # Learning rate
+p['wd'] = 5e-4  # Weight decay
 p['momentum'] = 0.9  # Momentum
+p['epoch_size'] = 40
 
 save_dir_root = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 exp_name = os.path.dirname(os.path.abspath(__file__)).split('/')[-1]
@@ -56,10 +56,10 @@ save_dir = os.path.join(save_dir_root, 'run', 'run_' + str(run_id))
 # Network definition
 net = deeplab_xception.DeepLabv3_plus(nInputChannels=3, n_classes=21)
 modelName = 'deeplabv3+'
-criterion = torch.nn.CrossEntropyLoss()
+criterion = utils.cross_entropy2d
 
 if resume_epoch == 0:
-    print("Initializing deeplabv3+ from scratch...")
+    print("Training deeplabv3+ from scratch...")
 else:
     print("Initializing weights from: {}...".format(
         os.path.join(save_dir, 'models', modelName + '_epoch-' + str(resume_epoch - 1) + '.pth')))
@@ -95,7 +95,7 @@ if resume_epoch != nEpochs:
     trainloader = DataLoader(voc_train, batch_size=p['trainBatch'], shuffle=True, num_workers=2)
     testloader = DataLoader(voc_val, batch_size=testBatch, shuffle=False, num_workers=2)
 
-    generate_param_report(os.path.join(save_dir, exp_name + '.txt'), p)
+    utils.generate_param_report(os.path.join(save_dir, exp_name + '.txt'), p)
 
     num_img_tr = len(trainloader)
     num_img_ts = len(testloader)
@@ -107,6 +107,11 @@ if resume_epoch != nEpochs:
     # Main Training and Testing Loop
     for epoch in range(resume_epoch, nEpochs):
         start_time = timeit.default_timer()
+
+        if epoch % p['epoch_size'] == p['epoch_size'] - 1:
+            lr_ = utils.lr_poly(p['lr'], epoch, nEpochs, 0.9)
+            print('(poly lr policy) learning rate: ', lr_)
+            optimizer = optim.SGD(net.parameters(), lr=lr_, momentum=p['momentum'], weight_decay=p['wd'])
 
         net.train()
         for ii, sample_batched in enumerate(trainloader):
@@ -120,11 +125,11 @@ if resume_epoch != nEpochs:
             output = net.forward(inputs)
             output = upsample(output, size=(513, 513), mode='bilinear', align_corners=True)
 
-            loss = cross_entropy2d(output, gts, size_average=False, batch_average=True)
+            loss = criterion(output, gts, size_average=False, batch_average=True)
             running_loss_tr += loss.item()
 
             # Print stuff
-            if ii % printInterval == 0:
+            if ii % num_img_tr == num_img_tr - 1:
                 running_loss_tr = running_loss_tr / num_img_tr
                 writer.add_scalar('data/total_loss_epoch', running_loss_tr, epoch)
                 print('[Epoch: %d, numImages: %5d]' % (epoch, ii * p['trainBatch'] + inputs.data.shape[0]))
@@ -164,11 +169,11 @@ if resume_epoch != nEpochs:
                     output = net.forward(inputs)
                 output = upsample(output, size=(513, 513), mode='bilinear', align_corners=True)
 
-                loss = cross_entropy2d(output, gts, size_average=False, batch_average=True)
+                loss = criterion(output, gts, size_average=False, batch_average=True)
                 running_loss_ts += loss.item()
 
                 # Print stuff
-                if ii % printInterval == 0:
+                if ii % num_img_ts == num_img_ts - 1:
                     running_loss_ts = running_loss_ts / num_img_ts
                     print('[Epoch: %d, numImages: %5d]' % (epoch, ii * testBatch + inputs.data.shape[0]))
                     writer.add_scalar('data/test_loss_epoch', running_loss_ts, epoch)

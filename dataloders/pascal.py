@@ -54,7 +54,7 @@ class VOCSegmentation(Dataset):
         assert (len(self.images) == len(self.categories))
 
         # Display stats
-        print('Number of images: {:d}\n'.format(len(self.images)))
+        print('Number of images in {}: {:d}'.format(split, len(self.images)))
 
     def __len__(self):
         return len(self.images)

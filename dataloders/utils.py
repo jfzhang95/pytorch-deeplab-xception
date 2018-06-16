@@ -49,3 +49,6 @@ def cross_entropy2d(logit, target, ignore_index=255, weight=None, size_average=T
         loss /= n
 
     return loss
+
+def lr_poly(base_lr, iter_, max_iter=100, power=0.9):
+    return base_lr * ((1 - float(iter_) / max_iter) ** power)
