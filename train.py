@@ -17,10 +17,10 @@ from torch.nn.functional import upsample
 from tensorboardX import SummaryWriter
 
 # Custom includes
-from dataloders import pascal
-from dataloders import utils
+from dataloaders import pascal
+from dataloaders import utils
 from networks import deeplab_xception
-from dataloders import custom_transforms as tr
+from dataloaders import custom_transforms as tr
 
 
 gpu_id = 0
