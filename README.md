@@ -1,12 +1,14 @@
 # pytorch-deeplab-xception
 
-## Introduction
-This is a Pytorch implementation of [DeepLab-Xception](https://arxiv.org/pdf/1802.02611), It's based on a Modified Aligned Xception backbone. We train DeepLab V3+ from scratch, using Pascal Voc 2012 dataset.
+### Introduction
+This is a Pytorch implementation of [DeepLab-Xception](https://arxiv.org/pdf/1802.02611), It's based on a Modified Aligned Xception backbone. Currently, we train DeepLab V3+ from scratch, using Pascal Voc 2012 dataset.
 
-## Status
-In progress
+### TODO
+- [x] Basic deeplab v3+ model
+- [ ] Add pretrained model and results evaluation
+- [ ] Training deeplab v3+ on SBD dataset
 
-## Requirements
+### Requirements
 ```
 Python3.x (Tested with 3.5)
 PyTorch (Tested with 0.4.0)
@@ -15,7 +17,7 @@ opencv-python
 ```
 
 ### Installation
-To use this code, please do:
+This code is tested in Ubuntu 16.04. To use this code, please do:
 
 0. Clone the repo:
     ```Shell

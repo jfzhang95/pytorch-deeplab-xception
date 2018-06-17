@@ -26,7 +26,7 @@ from dataloaders import custom_transforms as tr
 gpu_id = 0
 print('Using GPU: {} '.format(gpu_id))
 # Setting parameters
-nEpochs = 200  # Number of epochs for training
+nEpochs = 300  # Number of epochs for training
 resume_epoch = 0  # Default is 0, change if want to resume
 
 p = OrderedDict()  # Parameters to include in report
@@ -35,12 +35,11 @@ testBatch = 8  # Testing batch size
 useTest = True  # See evolution of the test set when training
 nTestInterval = 10  # Run on test set every nTestInterval epochs
 snapshot = 50  # Store a model every snapshot epochs
-zero_pad_crop = True  # Insert zero padding when cropping the image
 p['nAveGrad'] = 1  # Average the gradient of several iterations
 p['lr'] = 1e-4  # Learning rate
 p['wd'] = 5e-4  # Weight decay
 p['momentum'] = 0.9  # Momentum
-p['epoch_size'] = 40
+p['epoch_size'] = 40 # How many epochs to change learning rate
 
 save_dir_root = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 exp_name = os.path.dirname(os.path.abspath(__file__)).split('/')[-1]
@@ -81,12 +80,14 @@ if resume_epoch != nEpochs:
     p['optimizer'] = str(optimizer)
 
     composed_transforms_tr = transforms.Compose([
+        tr.RandomResizedCrop(size=513, scale=(0.5, 1.0)),
         tr.RandomHorizontalFlip(),
-        tr.FixedResize(resolutions={'image': (513, 513), 'gt': (513, 513)}),
+        tr.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(1.0, 1.0, 1.0)),
         tr.ToTensor()])
 
     composed_transforms_ts = transforms.Compose([
-        tr.FixedResize(resolutions={'image': (513, 513), 'gt': (513, 513)}),
+        tr.FixedResize(size=513),
+        tr.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(1.0, 1.0, 1.0)),
         tr.ToTensor()])
 
     voc_train = pascal.VOCSegmentation(split='train', transform=composed_transforms_tr)
@@ -138,6 +139,7 @@ if resume_epoch != nEpochs:
                 stop_time = timeit.default_timer()
                 print("Execution time: " + str(stop_time - start_time) + "\n")
 
+
             # Backward the averaged gradient
             loss /= p['nAveGrad']
             loss.backward()
@@ -179,5 +181,6 @@ if resume_epoch != nEpochs:
                     writer.add_scalar('data/test_loss_epoch', running_loss_ts, epoch)
                     print('Loss: %f' % running_loss_ts)
                     running_loss_ts = 0
+
 
     writer.close()

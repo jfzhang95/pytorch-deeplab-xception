@@ -87,8 +87,9 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     composed_transforms_tr = transforms.Compose([
+        tr.RandomResizedCrop(size=513),
         tr.RandomHorizontalFlip(),
-        tr.FixedResize(resolutions={'image': (513, 513), 'gt': (513, 513)}),
+        tr.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(1.0, 1.0, 1.0)),
         tr.ToTensor()])
 
     voc_train = VOCSegmentation(split='train',
@@ -98,11 +99,15 @@ if __name__ == '__main__':
 
     for ii, sample in enumerate(dataloader):
         for jj in range(sample["image"].size()[0]):
+            img = sample['image'].numpy()
             gt = sample['gt'].numpy()
             gt[gt > 0.5] = 255
             gt = np.array(gt[jj]).astype(np.uint8)
             plt.figure()
             plt.title('display')
+            plt.subplot(211)
+            plt.imshow(img[jj][0], cmap='gray')
+            plt.subplot(212)
             plt.imshow(gt[0], cmap='gray')
 
         if ii == 1:

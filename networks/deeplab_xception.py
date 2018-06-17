@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import math
 
 
 class SeparableConv2d(nn.Module):
@@ -222,8 +221,8 @@ class DeepLabv3_plus(nn.Module):
             if isinstance(m, nn.Conv2d):
                 # n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
                 # m.weight.data.normal_(0, math.sqrt(2. / n))
-                # m.weight.data.kaiming_normal_(mode='fan_out', nonlinearity='relu')
-                torch.nn.init.kaiming_normal_(m.weight.data, mode='fan_out', nonlinearity='relu')
+                # torch.nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                torch.nn.init.kaiming_normal_(m.weight)
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
