@@ -17,7 +17,7 @@ from torch.nn.functional import upsample
 from tensorboardX import SummaryWriter
 
 # Custom includes
-from dataloaders import pascal
+from dataloaders import pascal, sbd, combine_dbs
 from dataloaders import utils
 from networks import deeplab_xception
 from dataloaders import custom_transforms as tr
@@ -26,6 +26,7 @@ from dataloaders import custom_transforms as tr
 gpu_id = 0
 print('Using GPU: {} '.format(gpu_id))
 # Setting parameters
+use_sbd = True # Whether using SBD dataset
 nEpochs = 300  # Number of epochs for training
 resume_epoch = 0  # Default is 0, change if want to resume
 
@@ -93,7 +94,14 @@ if resume_epoch != nEpochs:
     voc_train = pascal.VOCSegmentation(split='train', transform=composed_transforms_tr)
     voc_val = pascal.VOCSegmentation(split='val', transform=composed_transforms_ts)
 
-    trainloader = DataLoader(voc_train, batch_size=p['trainBatch'], shuffle=True, num_workers=2)
+    if use_sbd:
+        print("Using SBD dataset")
+        sbd_train = sbd.SBDSegmentation(split=['train', 'val'], transform=composed_transforms_tr)
+        db_train = combine_dbs.CombineDBs([voc_train, sbd_train], excluded=[voc_val])
+    else:
+        db_train = voc_train
+
+    trainloader = DataLoader(db_train, batch_size=p['trainBatch'], shuffle=True, num_workers=2)
     testloader = DataLoader(voc_val, batch_size=testBatch, shuffle=False, num_workers=2)
 
     utils.generate_param_report(os.path.join(save_dir, exp_name + '.txt'), p)

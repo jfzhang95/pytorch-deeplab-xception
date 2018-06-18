@@ -8,7 +8,7 @@ import torch.nn.functional as F
 
 def fixed_resize(sample, resolution, flagval=None):
     if flagval is None:
-        if np.max(sample) <= 21:
+        if sample.ndim == 2:
             flagval = cv2.INTER_NEAREST
         else:
             flagval = cv2.INTER_CUBIC

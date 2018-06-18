@@ -1,17 +1,18 @@
 from __future__ import print_function, division
+import json
 import os
-from PIL import Image
+
 import numpy as np
-from torch.utils.data import Dataset
+import scipy.io
+import torch.utils.data as data
+from PIL import Image
 from mypath import Path
 
-class VOCSegmentation(Dataset):
-    """
-    PascalVoc dataset
-    """
+
+class SBDSegmentation(data.Dataset):
 
     def __init__(self,
-                 base_dir=Path.db_root_dir('pascal'),
+                 base_dir=Path.db_root_dir('sbd'),
                  split='train',
                  transform=None
                  ):
@@ -22,8 +23,10 @@ class VOCSegmentation(Dataset):
         """
         super().__init__()
         self._base_dir = base_dir
-        self._image_dir = os.path.join(self._base_dir, 'JPEGImages')
-        self._cat_dir = os.path.join(self._base_dir, 'SegmentationClass')
+        self._dataset_dir = os.path.join(self._base_dir, 'dataset')
+        self._image_dir = os.path.join(self._dataset_dir, 'img')
+        self._cat_dir = os.path.join(self._dataset_dir, 'cls')
+
 
         if isinstance(split, str):
             self.split = [split]
@@ -33,53 +36,57 @@ class VOCSegmentation(Dataset):
 
         self.transform = transform
 
-        _splits_dir = os.path.join(self._base_dir, 'ImageSets', 'Segmentation')
 
+
+        # Get list of all images from the split and check that the files exist
         self.im_ids = []
         self.images = []
         self.categories = []
-
         for splt in self.split:
-            with open(os.path.join(os.path.join(_splits_dir, splt + '.txt')), "r") as f:
+            with open(os.path.join(self._dataset_dir, splt + '.txt'), "r") as f:
                 lines = f.read().splitlines()
 
-            for ii, line in enumerate(lines):
+            for line in lines:
                 _image = os.path.join(self._image_dir, line + ".jpg")
-                _cat = os.path.join(self._cat_dir, line + ".png")
+                _categ= os.path.join(self._cat_dir, line + ".mat")
                 assert os.path.isfile(_image)
-                assert os.path.isfile(_cat)
+                assert os.path.isfile(_categ)
                 self.im_ids.append(line)
                 self.images.append(_image)
-                self.categories.append(_cat)
+                self.categories.append(_categ)
 
         assert (len(self.images) == len(self.categories))
 
-        # Display stats
-        print('Number of images in {}: {:d}'.format(split, len(self.images)))
 
-    def __len__(self):
-        return len(self.images)
+
+        # Display stats
+        print('Number of images: {:d}'.format(len(self.images)))
 
 
     def __getitem__(self, index):
-        _img, _target= self._make_img_gt_point_pair(index)
+
+        _img, _target = self._make_img_gt_point_pair(index)
+
         sample = {'image': _img, 'gt': _target}
+
 
         if self.transform is not None:
             sample = self.transform(sample)
 
         return sample
 
-    def _make_img_gt_point_pair(self, index):
-        # Read Image and Target
-        _img = np.array(Image.open(self.images[index]).convert('RGB')).astype(np.float32)
-        _target = np.array(Image.open(self.categories[index])).astype(np.float32)
+    def __len__(self):
+        return len(self.images)
 
+    def _make_img_gt_point_pair(self, index):
+        _img = np.array(Image.open(self.images[index]).convert('RGB')).astype(np.float32)
+        _target = np.array(scipy.io.loadmat(self.categories[index])["GTcls"][0]['Segmentation'][0]).astype(np.float32)
 
         return _img, _target
 
+
     def __str__(self):
-        return 'VOC2012(split=' + str(self.split) + ')'
+        return 'SBDSegmentation(split=' + str(self.split) + ')'
 
 
 if __name__ == '__main__':
@@ -88,17 +95,16 @@ if __name__ == '__main__':
     from torchvision import transforms
     import matplotlib.pyplot as plt
 
-    # transforms.RandomResizedCrop
     composed_transforms_tr = transforms.Compose([
         tr.RandomResizedCrop(size=513),
         tr.RandomHorizontalFlip(),
         tr.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(1.0, 1.0, 1.0)),
         tr.ToTensor()])
 
-    voc_train = VOCSegmentation(split='train',
+    sbd_train = SBDSegmentation(split='train',
                                 transform=composed_transforms_tr)
 
-    dataloader = DataLoader(voc_train, batch_size=2, shuffle=True, num_workers=2)
+    dataloader = DataLoader(sbd_train, batch_size=2, shuffle=True, num_workers=2)
 
     for ii, sample in enumerate(dataloader):
         for jj in range(sample["image"].size()[0]):
