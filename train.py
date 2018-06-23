@@ -26,7 +26,7 @@ from dataloaders import custom_transforms as tr
 gpu_id = 0
 print('Using GPU: {} '.format(gpu_id))
 # Setting parameters
-use_sbd = True # Whether using SBD dataset
+use_sbd = False # Whether to use SBD dataset
 nEpochs = 300  # Number of epochs for training
 resume_epoch = 0  # Default is 0, change if want to resume
 
