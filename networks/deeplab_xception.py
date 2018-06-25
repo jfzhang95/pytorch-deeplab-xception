@@ -1,18 +1,20 @@
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.utils.model_zoo as model_zoo
 
 
 class SeparableConv2d(nn.Module):
     def __init__(self, inplanes, planes, kernel_size=3, stride=1, padding=0, dilation=1, bias=False):
         super(SeparableConv2d, self).__init__()
 
-        self.depthwise = nn.Conv2d(inplanes, inplanes, kernel_size, stride, padding, dilation,
+        self.conv1 = nn.Conv2d(inplanes, inplanes, kernel_size, stride, padding, dilation,
                                groups=inplanes, bias=bias)
         self.pointwise = nn.Conv2d(inplanes, planes, 1, 1, 0, 1, 1, bias=bias)
 
     def forward(self, x):
-        x = self.depthwise(x)
+        x = self.conv1(x)
         x = self.pointwise(x)
         return x
 
@@ -116,6 +118,12 @@ class Xception(nn.Module):
         self.conv5 = SeparableConv2d(1536, 2048, 3, stride=1, padding=1)
         self.bn5 = nn.BatchNorm2d(2048)
 
+        # init weights
+        self._init_weight()
+
+        if pretrained:
+            self.__load_xception_pretrained()
+
     def forward(self, x):
         # Entry flow
         x = self.conv1(x)
@@ -165,6 +173,50 @@ class Xception(nn.Module):
 
         return x, low_level_feat
 
+    def _init_weight(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+                # torch.nn.init.kaiming_normal_(m.weight)
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+
+    def __load_xception_pretrained(self):
+        pretrain_dict = model_zoo.load_url('http://data.lip6.fr/cadene/pretrainedmodels/xception-b5690688.pth')
+        model_dict = {}
+        state_dict = self.state_dict()
+
+        for k, v in pretrain_dict.items():
+            if k in state_dict:
+                if 'pointwise' in k:
+                    v = v.unsqueeze(-1).unsqueeze(-1)
+                if k.startswith('block12'):
+                    model_dict[k.replace('block12', 'block20')] = v
+                elif k.startswith('block11'):
+                    model_dict[k.replace('block11', 'block12')] = v
+                    model_dict[k.replace('block11', 'block13')] = v
+                    model_dict[k.replace('block11', 'block14')] = v
+                    model_dict[k.replace('block11', 'block15')] = v
+                    model_dict[k.replace('block11', 'block16')] = v
+                    model_dict[k.replace('block11', 'block17')] = v
+                    model_dict[k.replace('block11', 'block18')] = v
+                    model_dict[k.replace('block11', 'block19')] = v
+                elif k.startswith('conv3'):
+                    model_dict[k] = v
+                elif k.startswith('bn3'):
+                    model_dict[k] = v
+                    model_dict[k.replace('bn3', 'bn4')] = v
+                elif k.startswith('conv4'):
+                    model_dict[k.replace('conv4', 'conv5')] = v
+                elif k.startswith('bn4'):
+                    model_dict[k.replace('bn4', 'bn5')] = v
+                else:
+                    model_dict[k] = v
+        state_dict.update(model_dict)
+        self.load_state_dict(state_dict)
+
 
 class ASPP_module(nn.Module):
     def __init__(self, inplanes, planes, rate):
@@ -213,19 +265,7 @@ class DeepLabv3_plus(nn.Module):
                                        nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
                                        nn.BatchNorm2d(256),
                                        nn.Conv2d(256, n_classes, kernel_size=1, stride=1))
-        # init weights
-        self._init_weight()
 
-    def _init_weight(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                # n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                # m.weight.data.normal_(0, math.sqrt(2. / n))
-                # torch.nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-                torch.nn.init.kaiming_normal_(m.weight)
-            elif isinstance(m, nn.BatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
 
     def forward(self, x):
         x, low_level_features = self.xception_features(x)
@@ -253,5 +293,10 @@ class DeepLabv3_plus(nn.Module):
 
 
 if __name__ == "__main__":
-    model = DeepLabv3_plus(nInputChannels=3, n_classes=21, _print=True)
-    print(model)
+    model = DeepLabv3_plus(nInputChannels=3, n_classes=21, _print=True).cuda()
+    image = torch.randn(1, 3, 513, 513).cuda()
+    # According to paper, encoder output stride is 16,
+    # Therefore, final output size is 256 (16*16).
+    with torch.no_grad():
+        output = model.forward(image)
+    print(output.size())
