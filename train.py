@@ -37,7 +37,7 @@ useTest = True  # See evolution of the test set when training
 nTestInterval = 10  # Run on test set every nTestInterval epochs
 snapshot = 50  # Store a model every snapshot epochs
 p['nAveGrad'] = 1  # Average the gradient of several iterations
-p['lr'] = 1e-4  # Learning rate
+p['lr'] = 1e-6  # Learning rate
 p['wd'] = 5e-4  # Weight decay
 p['momentum'] = 0.9  # Momentum
 p['epoch_size'] = 40 # How many epochs to change learning rate
@@ -45,16 +45,16 @@ p['epoch_size'] = 40 # How many epochs to change learning rate
 save_dir_root = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 exp_name = os.path.dirname(os.path.abspath(__file__)).split('/')[-1]
 
-if resume_epoch == 0:
+if resume_epoch != 0:
     runs = sorted(glob.glob(os.path.join(save_dir_root, 'run', 'run_*')))
-    run_id = int(runs[-1].split('_')[-1]) + 1 if runs else 0
+    run_id = int(runs[-1].split('_')[-1]) if runs else 0
 else:
     run_id = 0
 
 save_dir = os.path.join(save_dir_root, 'run', 'run_' + str(run_id))
 
 # Network definition
-net = deeplab_xception.DeepLabv3_plus(nInputChannels=3, n_classes=21)
+net = deeplab_xception.DeepLabv3_plus(nInputChannels=3, n_classes=21, pretrained=True)
 modelName = 'deeplabv3+'
 criterion = utils.cross_entropy2d
 

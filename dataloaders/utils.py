@@ -31,8 +31,8 @@ def generate_param_report(logfile, param):
 
 def cross_entropy2d(logit, target, ignore_index=255, weight=None, size_average=True, batch_average=True):
     n, c, h, w = logit.size()
-    logit = logit.contiguous().view(-1, c)
-    target = target.view(-1)
+    # logit = logit.permute(0, 2, 3, 1)
+    target = target.squeeze(1)
     criterion = nn.CrossEntropyLoss(weight=weight, ignore_index=ignore_index, size_average=False)
     loss = criterion(logit, target.long())
 

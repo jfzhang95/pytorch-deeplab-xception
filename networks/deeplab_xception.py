@@ -122,7 +122,7 @@ class Xception(nn.Module):
         self._init_weight()
 
         if pretrained:
-            self.__load_xception_pretrained()
+            self._load_xception_pretrained()
 
     def forward(self, x):
         # Entry flow
@@ -176,20 +176,22 @@ class Xception(nn.Module):
     def _init_weight(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
-                # torch.nn.init.kaiming_normal_(m.weight)
+                # n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                # m.weight.data.normal_(0, math.sqrt(2. / n))
+                torch.nn.init.kaiming_normal_(m.weight)
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
 
-    def __load_xception_pretrained(self):
+    def _load_xception_pretrained(self):
         pretrain_dict = model_zoo.load_url('http://data.lip6.fr/cadene/pretrainedmodels/xception-b5690688.pth')
         model_dict = {}
         state_dict = self.state_dict()
 
         for k, v in pretrain_dict.items():
             if k in state_dict:
+                # if 'bn' in k:
+                #     continue
                 if 'pointwise' in k:
                     v = v.unsqueeze(-1).unsqueeze(-1)
                 if k.startswith('block12'):
@@ -217,13 +219,13 @@ class Xception(nn.Module):
         state_dict.update(model_dict)
         self.load_state_dict(state_dict)
 
-
 class ASPP_module(nn.Module):
     def __init__(self, inplanes, planes, rate):
         super(ASPP_module, self).__init__()
         self.atrous_convolution = nn.Conv2d(inplanes, planes, kernel_size=3,
                                             stride=1, padding=rate, dilation=rate)
         self.batch_norm = nn.BatchNorm2d(planes)
+        self._init_weight()
 
     def forward(self, x):
         x = self.atrous_convolution(x)
@@ -231,9 +233,19 @@ class ASPP_module(nn.Module):
 
         return x
 
+    def _init_weight(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                # n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                # m.weight.data.normal_(0, math.sqrt(2. / n))
+                torch.nn.init.kaiming_normal_(m.weight)
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+
 
 class DeepLabv3_plus(nn.Module):
-    def __init__(self, nInputChannels=3, n_classes=21, _print=True):
+    def __init__(self, nInputChannels=3, n_classes=21, pretrained=False, _print=True):
         if _print:
             print("Constructing DeepLabv3+ model...")
             print("Number of classes: {}".format(n_classes))
@@ -241,7 +253,7 @@ class DeepLabv3_plus(nn.Module):
         super(DeepLabv3_plus, self).__init__()
 
         # Atrous Conv
-        self.xception_features = Xception(nInputChannels)
+        self.xception_features = Xception(nInputChannels, pretrained=pretrained)
 
         # ASPP
         rates = [1, 6, 12, 18]
@@ -265,6 +277,9 @@ class DeepLabv3_plus(nn.Module):
                                        nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
                                        nn.BatchNorm2d(256),
                                        nn.Conv2d(256, n_classes, kernel_size=1, stride=1))
+
+
+        # self.freeze_bn()
 
 
     def forward(self, x):
@@ -291,12 +306,47 @@ class DeepLabv3_plus(nn.Module):
 
         return x
 
+    def freeze_bn(self):
+        for m in self.modules():
+            if isinstance(m, nn.BatchNorm2d):
+                m.eval()
+
+def get_1x_lr_params(model):
+    """
+    This generator returns all the parameters of the net except for
+    the last classification layer. Note that for each batchnorm layer,
+    requires_grad is set to False in deeplab_resnet.py, therefore this function does not return
+    any batchnorm parameter
+    """
+    b = [model.xception_features, model.global_avg_pool, model.bn1, model.bn2]
+    for i in range(len(b)):
+        for k in b[i].parameters():
+            if k.requires_grad:
+                yield k
+
+
+def get_10x_lr_params(model):
+    """
+    This generator returns all the parameters for the last layer of the net,
+    which does the classification of pixel into classes
+    """
+    b = [model.aspp1, model.aspp2, model.aspp3, model.aspp4, model.conv1, model.conv2, model.last_conv]
+    for j in range(len(b)):
+        for k in b[j].parameters():
+            if k.requires_grad:
+                yield k
+
 
 if __name__ == "__main__":
-    model = DeepLabv3_plus(nInputChannels=3, n_classes=21, _print=True).cuda()
+    model = DeepLabv3_plus(nInputChannels=3, n_classes=21, pretrained=True, _print=True).cuda()
     image = torch.randn(1, 3, 513, 513).cuda()
     # According to paper, encoder output stride is 16,
     # Therefore, final output size is 256 (16*16).
     with torch.no_grad():
         output = model.forward(image)
     print(output.size())
+
+
+
+
+
