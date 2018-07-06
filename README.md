@@ -5,8 +5,9 @@ This is a Pytorch implementation of [DeepLab-Xception](https://arxiv.org/pdf/180
 
 ### TODO
 - [x] Basic deeplab v3+ model
+- [x] Training deeplab v3+ on SBD dataset
 - [ ] Add pretrained model and results evaluation
-- [ ] Training deeplab v3+ on SBD dataset
+
 
 ### Requirements
 ```
