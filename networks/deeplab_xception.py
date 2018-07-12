@@ -20,7 +20,7 @@ class SeparableConv2d(nn.Module):
 
 
 class Block(nn.Module):
-    def __init__(self, inplanes, planes, reps, stride=1, start_with_relu=True, grow_first=True):
+    def __init__(self, inplanes, planes, reps, stride=1, dilation=1, padding=1, start_with_relu=True, grow_first=True):
         super(Block, self).__init__()
 
         if planes != inplanes or stride != 1:
@@ -35,18 +35,18 @@ class Block(nn.Module):
         filters = inplanes
         if grow_first:
             rep.append(self.relu)
-            rep.append(SeparableConv2d(inplanes, planes, 3, stride=1, padding=1, bias=False))
+            rep.append(SeparableConv2d(inplanes, planes, 3, stride=1, padding=padding, dilation=dilation, bias=False))
             rep.append(nn.BatchNorm2d(planes))
             filters = planes
 
         for i in range(reps - 1):
             rep.append(self.relu)
-            rep.append(SeparableConv2d(filters, filters, 3, stride=1, padding=1, bias=False))
+            rep.append(SeparableConv2d(filters, filters, 3, stride=1, padding=padding, dilation=dilation, bias=False))
             rep.append(nn.BatchNorm2d(filters))
 
         if not grow_first:
             rep.append(self.relu)
-            rep.append(SeparableConv2d(inplanes, planes, 3, stride=1, padding=1, bias=False))
+            rep.append(SeparableConv2d(inplanes, planes, 3, stride=1, padding=padding, dilation=dilation, bias=False))
             rep.append(nn.BatchNorm2d(planes))
 
         if not start_with_relu:
@@ -54,6 +54,10 @@ class Block(nn.Module):
 
         if stride != 1:
             rep.append(SeparableConv2d(planes, planes, 3, stride=2, padding=1))
+
+        if padding == 2:
+             rep.append(SeparableConv2d(planes, planes, 3, stride=2, padding=17))
+
         self.rep = nn.Sequential(*rep)
 
     def forward(self, inp):
@@ -66,6 +70,7 @@ class Block(nn.Module):
             skip = inp
 
         x += skip
+
         return x
 
 
@@ -107,15 +112,15 @@ class Xception(nn.Module):
         self.block19 = Block(728, 728, reps=3, stride=1, start_with_relu=True, grow_first=True)
 
         # Exit flow
-        self.block20 = Block(728, 1024, reps=2, stride=2, start_with_relu=True, grow_first=False)
+        self.block20 = Block(728, 1024, reps=2, stride=1, padding=2, dilation=2, start_with_relu=True, grow_first=False)
 
-        self.conv3 = SeparableConv2d(1024, 1536, 3, stride=1, padding=1)
+        self.conv3 = SeparableConv2d(1024, 1536, 3, stride=1, padding=2, dilation=2)
         self.bn3 = nn.BatchNorm2d(1536)
 
-        self.conv4 = SeparableConv2d(1536, 1536, 3, stride=1, padding=1)
+        self.conv4 = SeparableConv2d(1536, 1536, 3, stride=1, padding=2, dilation=2)
         self.bn4 = nn.BatchNorm2d(1536)
 
-        self.conv5 = SeparableConv2d(1536, 2048, 3, stride=1, padding=1)
+        self.conv5 = SeparableConv2d(1536, 2048, 3, stride=1, padding=2, dilation=2)
         self.bn5 = nn.BatchNorm2d(2048)
 
         # init weights
@@ -135,8 +140,8 @@ class Xception(nn.Module):
         x = self.relu(x)
 
         x = self.block1(x)
+        low_level_feat = F.pad(x, pad=(0, 1, 0, 1))
         x = self.block2(x)
-        low_level_feat = x
         x = self.block3(x)
 
         # Middle flow
@@ -190,8 +195,6 @@ class Xception(nn.Module):
 
         for k, v in pretrain_dict.items():
             if k in state_dict:
-                # if 'bn' in k:
-                #     continue
                 if 'pointwise' in k:
                     v = v.unsqueeze(-1).unsqueeze(-1)
                 if k.startswith('block12'):
@@ -269,7 +272,7 @@ class DeepLabv3_plus(nn.Module):
         self.bn1 = nn.BatchNorm2d(256)
 
         # adopt [1x1, 48] for channel reduction.
-        self.conv2 = nn.Conv2d(256, 48, 1)
+        self.conv2 = nn.Conv2d(128, 48, 1)
         self.bn2 = nn.BatchNorm2d(48)
 
         self.last_conv = nn.Sequential(nn.Conv2d(304, 256, kernel_size=3, stride=1, padding=1),
@@ -339,9 +342,7 @@ def get_10x_lr_params(model):
 
 if __name__ == "__main__":
     model = DeepLabv3_plus(nInputChannels=3, n_classes=21, pretrained=True, _print=True).cuda()
-    image = torch.randn(1, 3, 513, 513).cuda()
-    # According to paper, encoder output stride is 16,
-    # Therefore, final output size is 256 (16*16).
+    image = torch.randn(1, 3, 512, 512).cuda()
     with torch.no_grad():
         output = model.forward(image)
     print(output.size())
