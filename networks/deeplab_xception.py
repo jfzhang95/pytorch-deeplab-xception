@@ -45,7 +45,7 @@ class SeparableConv2d_same(nn.Module):
 
 
 class Block(nn.Module):
-    def __init__(self, inplanes, planes, reps, stride=1, dilation=1, padding=1, start_with_relu=True, grow_first=True):
+    def __init__(self, inplanes, planes, reps, stride=1, dilation=1, start_with_relu=True, grow_first=True):
         super(Block, self).__init__()
 
         if planes != inplanes or stride != 1:
@@ -134,7 +134,7 @@ class Xception(nn.Module):
         self.block19 = Block(728, 728, reps=3, stride=1, start_with_relu=True, grow_first=True)
 
         # Exit flow
-        self.block20 = Block(728, 1024, reps=2, stride=1, padding=2, dilation=2, start_with_relu=True, grow_first=False)
+        self.block20 = Block(728, 1024, reps=2, stride=1, dilation=2, start_with_relu=True, grow_first=False)
 
         self.conv3 = SeparableConv2d_same(1024, 1536, 3, stride=1, dilation=2)
         self.bn3 = nn.BatchNorm2d(1536)

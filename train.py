@@ -31,8 +31,8 @@ nEpochs = 300  # Number of epochs for training
 resume_epoch = 0  # Default is 0, change if want to resume
 
 p = OrderedDict()  # Parameters to include in report
-p['trainBatch'] = 8  # Training batch size
-testBatch = 8  # Testing batch size
+p['trainBatch'] = 6  # Training batch size
+testBatch = 6  # Testing batch size
 useTest = True  # See evolution of the test set when training
 nTestInterval = 10  # Run on test set every nTestInterval epochs
 snapshot = 50  # Store a model every snapshot epochs
