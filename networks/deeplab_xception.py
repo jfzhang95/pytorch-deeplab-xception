@@ -104,11 +104,11 @@ class Xception(nn.Module):
         super(Xception, self).__init__()
 
         # Entry flow
-        self.conv1 = nn.Conv2d(inplanes, 32, 3, stride=2, bias=False)
+        self.conv1 = nn.Conv2d(inplanes, 32, 3, stride=2, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(32)
         self.relu = nn.ReLU(inplace=True)
 
-        self.conv2 = nn.Conv2d(32, 64, 3, bias=False)
+        self.conv2 = nn.Conv2d(32, 64, 3, stride=1, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(64)
 
         self.block1 = Block(64, 128, reps=2, stride=2, start_with_relu=False)
@@ -162,7 +162,7 @@ class Xception(nn.Module):
         x = self.relu(x)
 
         x = self.block1(x)
-        low_level_feat = F.pad(x, pad=(0, 1, 0, 1))
+        low_level_feat = x
         x = self.block2(x)
         x = self.block3(x)
 
