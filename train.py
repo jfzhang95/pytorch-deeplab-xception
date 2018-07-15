@@ -4,6 +4,7 @@ from datetime import datetime
 import os
 import glob
 from collections import OrderedDict
+import numpy as np
 
 # PyTorch includes
 import torch
@@ -11,7 +12,8 @@ from torch.autograd import Variable
 import torch.optim as optim
 from torchvision import transforms
 from torch.utils.data import DataLoader
-from torch.nn.functional import upsample
+from torchvision.utils import make_grid
+
 
 # Tensorboard include
 from tensorboardX import SummaryWriter
@@ -34,13 +36,13 @@ p = OrderedDict()  # Parameters to include in report
 p['trainBatch'] = 6  # Training batch size
 testBatch = 6  # Testing batch size
 useTest = True  # See evolution of the test set when training
-nTestInterval = 10  # Run on test set every nTestInterval epochs
+nTestInterval = 25  # Run on test set every nTestInterval epochs
 snapshot = 50  # Store a model every snapshot epochs
 p['nAveGrad'] = 1  # Average the gradient of several iterations
-p['lr'] = 1e-6  # Learning rate
+p['lr'] = 5e-7  # Learning rate
 p['wd'] = 5e-4  # Weight decay
 p['momentum'] = 0.9  # Momentum
-p['epoch_size'] = 40 # How many epochs to change learning rate
+p['epoch_size'] = 20 # How many epochs to change learning rate
 
 save_dir_root = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 exp_name = os.path.dirname(os.path.abspath(__file__)).split('/')[-1]
@@ -81,14 +83,15 @@ if resume_epoch != nEpochs:
     p['optimizer'] = str(optimizer)
 
     composed_transforms_tr = transforms.Compose([
-        tr.RandomResizedCrop(size=512, scale=(0.5, 1.0)),
         tr.RandomHorizontalFlip(),
-        tr.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(1.0, 1.0, 1.0)),
+        tr.ScaleNRotate(rots=(-15, 15), scales=(.75, 1.5)),
+        tr.FixedResize(size=512),
+        tr.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         tr.ToTensor()])
 
     composed_transforms_ts = transforms.Compose([
         tr.FixedResize(size=512),
-        tr.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(1.0, 1.0, 1.0)),
+        tr.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         tr.ToTensor()])
 
     voc_train = pascal.VOCSegmentation(split='train', transform=composed_transforms_tr)
@@ -128,11 +131,11 @@ if resume_epoch != nEpochs:
             inputs, gts = sample_batched['image'], sample_batched['gt']
             # Forward-Backward of the mini-batch
             inputs, gts = Variable(inputs, requires_grad=True), Variable(gts)
+
             if gpu_id >= 0:
                 inputs, gts = inputs.cuda(), gts.cuda()
 
             output = net.forward(inputs)
-            # output = upsample(output, size=(513, 513), mode='bilinear', align_corners=True)
 
             loss = criterion(output, gts, size_average=False, batch_average=True)
             running_loss_tr += loss.item()
@@ -160,9 +163,19 @@ if resume_epoch != nEpochs:
                 optimizer.zero_grad()
                 aveGrad = 0
 
+            if ii % num_img_tr / 20 == 0:
+                grid_image = make_grid(inputs[:3].clone().cpu().data, 3, normalize=True)
+                writer.add_image('image', grid_image)
+                grid_image = make_grid(utils.decode_seg_map_sequence(torch.max(output[:3], 1)[1].detach().cpu().numpy()), 3, normalize=False,
+                                       range=(0, 255))
+                writer.add_image('Predicted label', grid_image)
+                grid_image = make_grid(utils.decode_seg_map_sequence(torch.squeeze(gts[:3], 1).detach().cpu().numpy()), 3, normalize=False, range=(0, 255))
+                writer.add_image('Groundtruth label', grid_image)
+
         # Save the model
         if (epoch % snapshot) == snapshot - 1:
             torch.save(net.state_dict(), os.path.join(save_dir, 'models', modelName + '_epoch-' + str(epoch) + '.pth'))
+            print("Save model at {}\n".format(os.path.join(save_dir, 'models', modelName + '_epoch-' + str(epoch) + '.pth')))
 
         # One testing epoch
         if useTest and epoch % nTestInterval == (nTestInterval - 1):
@@ -177,7 +190,6 @@ if resume_epoch != nEpochs:
 
                 with torch.no_grad():
                     output = net.forward(inputs)
-                # output = upsample(output, size=(513, 513), mode='bilinear', align_corners=True)
 
                 loss = criterion(output, gts, size_average=False, batch_average=True)
                 running_loss_ts += loss.item()
@@ -185,9 +197,10 @@ if resume_epoch != nEpochs:
                 # Print stuff
                 if ii % num_img_ts == num_img_ts - 1:
                     running_loss_ts = running_loss_ts / num_img_ts
+                    print('Validation:')
                     print('[Epoch: %d, numImages: %5d]' % (epoch, ii * testBatch + inputs.data.shape[0]))
                     writer.add_scalar('data/test_loss_epoch', running_loss_ts, epoch)
-                    print('Loss: %f' % running_loss_ts)
+                    print('Loss: %f\n' % running_loss_ts)
                     running_loss_ts = 0
 
 

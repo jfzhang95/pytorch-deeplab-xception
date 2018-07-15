@@ -62,17 +62,17 @@ if __name__ == "__main__":
     import torch
     import numpy as np
     import dataloaders.custom_transforms as tr
+    from dataloaders.utils import decode_segmap
     from torchvision import transforms
 
     composed_transforms_tr = transforms.Compose([
-        tr.RandomResizedCrop(size=513),
         tr.RandomHorizontalFlip(),
-        tr.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(1.0, 1.0, 1.0)),
+        tr.ScaleNRotate(rots=(-15, 15), scales=(.75, 1.5)),
+        tr.FixedResize(size=512),
         tr.ToTensor()])
 
     composed_transforms_ts = transforms.Compose([
-        tr.FixedResize(size=513),
-        tr.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(1.0, 1.0, 1.0)),
+        tr.FixedResize(size=512),
         tr.ToTensor()])
 
     pascal_voc_val = pascal.VOCSegmentation(split='val', transform=composed_transforms_ts)
@@ -86,14 +86,16 @@ if __name__ == "__main__":
         for jj in range(sample["image"].size()[0]):
             img = sample['image'].numpy()
             gt = sample['gt'].numpy()
-            gt[gt > 0.5] = 255
-            gt = np.array(gt[jj]).astype(np.uint8)
+            tmp = np.array(gt[jj]).astype(np.uint8)
+            tmp = np.squeeze(tmp, axis=0)
+            segmap = decode_segmap(tmp)
+            img_tmp = np.transpose(img[jj], axes=[1, 2, 0]).astype(np.uint8)
             plt.figure()
             plt.title('display')
             plt.subplot(211)
-            plt.imshow(img[jj][0], cmap='gray')
+            plt.imshow(img_tmp)
             plt.subplot(212)
-            plt.imshow(gt[0], cmap='gray')
+            plt.imshow(segmap)
 
         if ii == 1:
             break

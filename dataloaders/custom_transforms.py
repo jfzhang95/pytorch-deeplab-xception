@@ -123,6 +123,52 @@ class RandomResizedCrop(object):
         return 'RandomResizedCrop: (size={}, scale={}, ratio={}.'.format(str(self.size),
                                                         str(self.scale), str(self.ratio))
 
+
+class ScaleNRotate(object):
+    """Scale (zoom-in, zoom-out) and Rotate the image and the ground truth.
+    Args:
+        rots (tuple): (minimum, maximum) rotation angle
+        scales (tuple): (minimum, maximum) scale
+    """
+    def __init__(self, rots=(-30, 30), scales=(.75, 1.25)):
+        assert (isinstance(rots, type(scales)))
+        self.rots = rots
+        self.scales = scales
+
+    def __call__(self, sample):
+
+        rot = (self.rots[1] - self.rots[0]) * random.random() - \
+              (self.rots[1] - self.rots[0])/2
+
+        sc = (self.scales[1] - self.scales[0]) * random.random() - \
+                 (self.scales[1] - self.scales[0]) / 2 + 1
+
+
+        for elem in sample.keys():
+
+            tmp = sample[elem]
+
+            h, w = tmp.shape[:2]
+            center = (w / 2, h / 2)
+            assert(center != 0)  # Strange behaviour warpAffine
+
+            M = cv2.getRotationMatrix2D(center, rot, sc)
+
+            if tmp.ndim == 2 or 'gt' in elem:
+                flagval = cv2.INTER_NEAREST
+            else:
+                flagval = cv2.INTER_CUBIC
+
+            tmp = cv2.warpAffine(tmp, M, (w, h), flags=flagval)
+
+            sample[elem] = tmp
+
+        return sample
+
+    def __str__(self):
+        return 'ScaleNRotate:(rot='+str(self.rots)+',scale='+str(self.scales)+')'
+
+
 class RandomHorizontalFlip(object):
     """Horizontally flip the given image and ground truth randomly with a probability of 0.5."""
 
