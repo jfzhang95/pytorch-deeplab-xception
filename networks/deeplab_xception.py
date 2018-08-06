@@ -78,7 +78,7 @@ class Block(nn.Module):
             rep = rep[1:]
 
         if stride != 1:
-            rep.append(SeparableConv2d_same(planes, planes, 3, stride=2))
+            rep.append(SeparableConv2d_same(planes, planes, 3, stride=stride))
 
         self.rep = nn.Sequential(*rep)
 
