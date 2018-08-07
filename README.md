@@ -6,7 +6,7 @@ This is a Pytorch implementation of [DeepLab-Xception](https://arxiv.org/pdf/180
 ![Results](doc/results.png)
 
 We use deeplab v3+ model trained on Pascal VOC 2012 and SBD datasets to inference these results.
-After 50 epoch, our deeplab v3+ model can reach 72.7% mIoU on Pascal VOC 2012 test set.
+After 50 training epoch, our deeplab v3+ model can reach 72.7% mIoU on Pascal VOC 2012 test set.
 
 ### Requirements
 ```
@@ -34,6 +34,7 @@ This code is tested in Ubuntu 16.04. To use this code, please do:
 - [x] Basic deeplab v3+ model
 - [x] Training deeplab v3+ on SBD dataset
 - [x] Results evaluation on Pascal VOC 2012 test set
+- [ ] Deeplab v3+ model using resnet as backbone
 - [ ] Training deeplab v3+ on other datasets
 
 
