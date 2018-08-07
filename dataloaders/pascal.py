@@ -63,7 +63,7 @@ class VOCSegmentation(Dataset):
 
     def __getitem__(self, index):
         _img, _target= self._make_img_gt_point_pair(index)
-        sample = {'image': _img, 'gt': _target}
+        sample = {'image': _img, 'label': _target}
 
         if self.transform is not None:
             sample = self.transform(sample)
@@ -72,9 +72,11 @@ class VOCSegmentation(Dataset):
 
     def _make_img_gt_point_pair(self, index):
         # Read Image and Target
-        _img = np.array(Image.open(self.images[index]).convert('RGB')).astype(np.float32)
-        _target = np.array(Image.open(self.categories[index])).astype(np.float32)
+        # _img = np.array(Image.open(self.images[index]).convert('RGB')).astype(np.float32)
+        # _target = np.array(Image.open(self.categories[index])).astype(np.float32)
 
+        _img = Image.open(self.images[index]).convert('RGB')
+        _target = Image.open(self.categories[index])
 
         return _img, _target
 
@@ -91,19 +93,21 @@ if __name__ == '__main__':
 
     composed_transforms_tr = transforms.Compose([
         tr.RandomHorizontalFlip(),
-        tr.ScaleNRotate(rots=(-15, 15), scales=(.75, 1.5)),
-        tr.FixedResize(size=512),
+        tr.RandomSized(512),
+        tr.RandomRotate(15),
         tr.ToTensor()])
+
+
 
     voc_train = VOCSegmentation(split='train',
                                 transform=composed_transforms_tr)
 
-    dataloader = DataLoader(voc_train, batch_size=2, shuffle=True, num_workers=2)
+    dataloader = DataLoader(voc_train, batch_size=5, shuffle=True, num_workers=2)
 
     for ii, sample in enumerate(dataloader):
         for jj in range(sample["image"].size()[0]):
             img = sample['image'].numpy()
-            gt = sample['gt'].numpy()
+            gt = sample['label'].numpy()
             tmp = np.array(gt[jj]).astype(np.uint8)
             tmp = np.squeeze(tmp, axis=0)
             segmap = decode_segmap(tmp)
@@ -118,3 +122,36 @@ if __name__ == '__main__':
         if ii == 1:
             break
     plt.show(block=True)
+
+    # import torch
+    #
+    # composed_transforms_tr = transforms.Compose([
+    #     tr.FixedResize((512, 512)),
+    #     tr.ToTensor()
+    # ])
+    #
+    # voc_train = VOCSegmentation(split='train',
+    #                             transform=composed_transforms_tr)
+    #
+    # data_loader = DataLoader(voc_train, batch_size=1464, shuffle=False, num_workers=2)
+    #
+    # label_stat = [0] * 21
+    #
+    # for sample in data_loader:
+    #     labels = sample['label']
+    #     for i in range(0, 21):
+    #         print(i)
+    #         if i == 0:
+    #             label_stat[i] += torch.sum(labels[labels == i] + 1).item()
+    #         else:
+    #             label_stat[i] += torch.sum(labels[labels == i]).item()
+    #
+    #
+    # print(label_stat)
+    #
+    # medium = np.median(np.array(label_stat))
+    # print(medium)
+    #
+    # weight = [medium/i for i in label_stat]
+    # print(weight)
+

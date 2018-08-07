@@ -7,7 +7,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 
-
 def get_pascal_labels():
     """Load the mapping that associates pascal classes with label colors
     Returns:
@@ -74,24 +73,6 @@ def decode_segmap(label_mask, plot=False):
     else:
         return rgb
 
-def fixed_resize(sample, resolution, flagval=None):
-    if flagval is None:
-        if sample.ndim == 2:
-            flagval = cv2.INTER_NEAREST
-        else:
-            flagval = cv2.INTER_CUBIC
-
-    if sample.ndim == 2 or (sample.ndim == 3 and sample.shape[2] == 3):
-        sample = cv2.resize(sample, resolution, interpolation=flagval)
-
-    else:
-        tmp = sample
-        sample = np.zeros(np.append(resolution, tmp.shape[2]), dtype=np.float32)
-        for ii in range(sample.shape[2]):
-            sample[:, :, ii] = cv2.resize(tmp[:, :, ii], resolution, interpolation=flagval)
-
-    return sample
-
 def generate_param_report(logfile, param):
     log_file = open(logfile, 'w')
     for key, val in param.items():
@@ -102,7 +83,10 @@ def cross_entropy2d(logit, target, ignore_index=255, weight=None, size_average=T
     n, c, h, w = logit.size()
     # logit = logit.permute(0, 2, 3, 1)
     target = target.squeeze(1)
-    criterion = nn.CrossEntropyLoss(weight=weight, ignore_index=ignore_index, size_average=False)
+    if weight is None:
+        criterion = nn.CrossEntropyLoss(weight=weight, ignore_index=ignore_index, size_average=False)
+    else:
+        criterion = nn.CrossEntropyLoss(weight=torch.from_numpy(np.array(weight)).float().cuda(), ignore_index=ignore_index, size_average=False)
     loss = criterion(logit, target.long())
 
     if size_average:
@@ -115,3 +99,33 @@ def cross_entropy2d(logit, target, ignore_index=255, weight=None, size_average=T
 
 def lr_poly(base_lr, iter_, max_iter=100, power=0.9):
     return base_lr * ((1 - float(iter_) / max_iter) ** power)
+
+
+def get_iou(pred, gt):
+    total_miou = 0.0
+    for i in range(len(pred)):
+        pred_tmp = pred[i]
+        gt_tmp = gt[i]
+
+        intersect = [0] * 21
+        union = [0] * 21
+        for j in range(21):
+            match = (pred_tmp == j) + (gt_tmp == j)
+
+            it = torch.sum(match == 2).item()
+            un = torch.sum(match > 0).item()
+
+            intersect[j] += it
+            union[j] += un
+
+        iou = []
+        unique_label = np.unique(gt_tmp.data.cpu().numpy())
+        for k in range(len(intersect)):
+            if k not in unique_label:
+                continue
+            iou.append(intersect[k] / union[k])
+
+        miou = (sum(iou) / len(iou))
+        total_miou += miou
+
+    return total_miou

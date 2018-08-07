@@ -67,12 +67,12 @@ if __name__ == "__main__":
 
     composed_transforms_tr = transforms.Compose([
         tr.RandomHorizontalFlip(),
-        tr.ScaleNRotate(rots=(-15, 15), scales=(.75, 1.5)),
-        tr.FixedResize(size=512),
+        tr.RandomSized(512),
+        tr.RandomRotate(15),
         tr.ToTensor()])
 
     composed_transforms_ts = transforms.Compose([
-        tr.FixedResize(size=512),
+        tr.FixedResize(size=(512, 512)),
         tr.ToTensor()])
 
     pascal_voc_val = pascal.VOCSegmentation(split='val', transform=composed_transforms_ts)
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     for ii, sample in enumerate(dataloader):
         for jj in range(sample["image"].size()[0]):
             img = sample['image'].numpy()
-            gt = sample['gt'].numpy()
+            gt = sample['label'].numpy()
             tmp = np.array(gt[jj]).astype(np.uint8)
             tmp = np.squeeze(tmp, axis=0)
             segmap = decode_segmap(tmp)

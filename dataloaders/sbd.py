@@ -67,7 +67,7 @@ class SBDSegmentation(data.Dataset):
 
         _img, _target = self._make_img_gt_point_pair(index)
 
-        sample = {'image': _img, 'gt': _target}
+        sample = {'image': _img, 'label': _target}
 
 
         if self.transform is not None:
@@ -79,8 +79,8 @@ class SBDSegmentation(data.Dataset):
         return len(self.images)
 
     def _make_img_gt_point_pair(self, index):
-        _img = np.array(Image.open(self.images[index]).convert('RGB')).astype(np.float32)
-        _target = np.array(scipy.io.loadmat(self.categories[index])["GTcls"][0]['Segmentation'][0]).astype(np.float32)
+        _img = Image.open(self.images[index]).convert('RGB')
+        _target = Image.fromarray(scipy.io.loadmat(self.categories[index])["GTcls"][0]['Segmentation'][0])
 
         return _img, _target
 
@@ -98,8 +98,8 @@ if __name__ == '__main__':
 
     composed_transforms_tr = transforms.Compose([
         tr.RandomHorizontalFlip(),
-        tr.ScaleNRotate(rots=(-15, 15), scales=(.75, 1.5)),
-        tr.FixedResize(size=512),
+        tr.RandomSized(512),
+        tr.RandomRotate(15),
         tr.ToTensor()])
 
     sbd_train = SBDSegmentation(split='train',
@@ -110,7 +110,7 @@ if __name__ == '__main__':
     for ii, sample in enumerate(dataloader):
         for jj in range(sample["image"].size()[0]):
             img = sample['image'].numpy()
-            gt = sample['gt'].numpy()
+            gt = sample['label'].numpy()
             tmp = np.array(gt[jj]).astype(np.uint8)
             tmp = np.squeeze(tmp, axis=0)
             segmap = decode_segmap(tmp)

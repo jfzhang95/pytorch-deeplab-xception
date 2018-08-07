@@ -5,7 +5,6 @@ import torch.nn.functional as F
 import torch.utils.model_zoo as model_zoo
 
 
-
 class SeparableConv2d(nn.Module):
     def __init__(self, inplanes, planes, kernel_size=3, stride=1, padding=0, dilation=1, bias=False):
         super(SeparableConv2d, self).__init__()
@@ -60,25 +59,25 @@ class Block(nn.Module):
         filters = inplanes
         if grow_first:
             rep.append(self.relu)
-            rep.append(SeparableConv2d_same(inplanes, planes, 3, stride=1, dilation=dilation, bias=False))
+            rep.append(SeparableConv2d_same(inplanes, planes, 3, stride=1, dilation=dilation))
             rep.append(nn.BatchNorm2d(planes))
             filters = planes
 
         for i in range(reps - 1):
             rep.append(self.relu)
-            rep.append(SeparableConv2d_same(filters, filters, 3, stride=1, dilation=dilation, bias=False))
+            rep.append(SeparableConv2d_same(filters, filters, 3, stride=1, dilation=dilation))
             rep.append(nn.BatchNorm2d(filters))
 
         if not grow_first:
             rep.append(self.relu)
-            rep.append(SeparableConv2d_same(inplanes, planes, 3, stride=1, dilation=dilation, bias=False))
+            rep.append(SeparableConv2d_same(inplanes, planes, 3, stride=1, dilation=dilation))
             rep.append(nn.BatchNorm2d(planes))
 
         if not start_with_relu:
             rep = rep[1:]
 
         if stride != 1:
-            rep.append(SeparableConv2d_same(planes, planes, 3, stride=2))
+            rep.append(SeparableConv2d_same(planes, planes, 3, stride=stride))
 
         self.rep = nn.Sequential(*rep)
 
@@ -145,11 +144,12 @@ class Xception(nn.Module):
         self.conv5 = SeparableConv2d_same(1536, 2048, 3, stride=1, dilation=2)
         self.bn5 = nn.BatchNorm2d(2048)
 
-        # init weights
-        self._init_weight()
+        # Init weights
+        self.__init_weight()
 
+        # Load pretrained model
         if pretrained:
-            self._load_xception_pretrained()
+            self.__load_xception_pretrained()
 
     def forward(self, x):
         # Entry flow
@@ -200,7 +200,7 @@ class Xception(nn.Module):
 
         return x, low_level_feat
 
-    def _init_weight(self):
+    def __init_weight(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 # n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
@@ -210,7 +210,7 @@ class Xception(nn.Module):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
 
-    def _load_xception_pretrained(self):
+    def __load_xception_pretrained(self):
         pretrain_dict = model_zoo.load_url('http://data.lip6.fr/cadene/pretrainedmodels/xception-b5690688.pth')
         model_dict = {}
         state_dict = self.state_dict()
@@ -247,18 +247,26 @@ class Xception(nn.Module):
 class ASPP_module(nn.Module):
     def __init__(self, inplanes, planes, rate):
         super(ASPP_module, self).__init__()
-        self.atrous_convolution = nn.Conv2d(inplanes, planes, kernel_size=3,
-                                            stride=1, padding=rate, dilation=rate)
-        self.batch_norm = nn.BatchNorm2d(planes)
-        self._init_weight()
+        if rate == 1:
+            kernel_size = 1
+            padding = 0
+        else:
+            kernel_size = 3
+            padding = rate
+        self.atrous_convolution = nn.Conv2d(inplanes, planes, kernel_size=kernel_size,
+                                            stride=1, padding=padding, dilation=rate, bias=False)
+        self.bn = nn.BatchNorm2d(planes)
+        self.relu = nn.ReLU()
+
+        self.__init_weight()
 
     def forward(self, x):
         x = self.atrous_convolution(x)
-        x = self.batch_norm(x)
+        x = self.bn(x)
 
-        return x
+        return self.relu(x)
 
-    def _init_weight(self):
+    def __init_weight(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 # n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
@@ -287,25 +295,27 @@ class DeepLabv3_plus(nn.Module):
         self.aspp3 = ASPP_module(2048, 256, rate=rates[2])
         self.aspp4 = ASPP_module(2048, 256, rate=rates[3])
 
-        self.global_avg_pool = nn.Sequential(nn.AdaptiveAvgPool2d((1, 1)),
-                                        nn.Conv2d(2048, 256, 1, stride=1))
+        self.relu = nn.ReLU()
 
-        self.conv1 = nn.Conv2d(1280, 256, 1)
+        self.global_avg_pool = nn.Sequential(nn.AdaptiveAvgPool2d((1, 1)),
+                                             nn.Conv2d(2048, 256, 1, stride=1, bias=False),
+                                             nn.BatchNorm2d(256),
+                                             nn.ReLU())
+
+        self.conv1 = nn.Conv2d(1280, 256, 1, bias=False)
         self.bn1 = nn.BatchNorm2d(256)
 
         # adopt [1x1, 48] for channel reduction.
-        self.conv2 = nn.Conv2d(128, 48, 1)
+        self.conv2 = nn.Conv2d(128, 48, 1, bias=False)
         self.bn2 = nn.BatchNorm2d(48)
 
-        self.last_conv = nn.Sequential(nn.Conv2d(304, 256, kernel_size=3, stride=1, padding=1),
+        self.last_conv = nn.Sequential(nn.Conv2d(304, 256, kernel_size=3, stride=1, padding=1, bias=False),
                                        nn.BatchNorm2d(256),
-                                       nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
+                                       nn.ReLU(),
+                                       nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1, bias=False),
                                        nn.BatchNorm2d(256),
+                                       nn.ReLU(),
                                        nn.Conv2d(256, n_classes, kernel_size=1, stride=1))
-
-
-        # self.freeze_bn()
-
 
     def forward(self, x):
         x, low_level_features = self.xception_features(x)
@@ -320,10 +330,13 @@ class DeepLabv3_plus(nn.Module):
 
         x = self.conv1(x)
         x = self.bn1(x)
+        x = self.relu(x)
         x = F.upsample(x, scale_factor=4, mode='bilinear', align_corners=True)
 
         low_level_features = self.conv2(low_level_features)
         low_level_features = self.bn2(low_level_features)
+        low_level_features = self.relu(low_level_features)
+
 
         x = torch.cat((x, low_level_features), dim=1)
         x = self.last_conv(x)
@@ -336,6 +349,16 @@ class DeepLabv3_plus(nn.Module):
             if isinstance(m, nn.BatchNorm2d):
                 m.eval()
 
+    def __init_weight(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                # n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                # m.weight.data.normal_(0, math.sqrt(2. / n))
+                torch.nn.init.kaiming_normal_(m.weight)
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+
 def get_1x_lr_params(model):
     """
     This generator returns all the parameters of the net except for
@@ -343,7 +366,7 @@ def get_1x_lr_params(model):
     requires_grad is set to False in deeplab_resnet.py, therefore this function does not return
     any batchnorm parameter
     """
-    b = [model.xception_features, model.global_avg_pool, model.bn1, model.bn2]
+    b = [model.xception_features]
     for i in range(len(b)):
         for k in b[i].parameters():
             if k.requires_grad:
@@ -363,8 +386,8 @@ def get_10x_lr_params(model):
 
 
 if __name__ == "__main__":
-    model = DeepLabv3_plus(nInputChannels=3, n_classes=21, pretrained=True, _print=True).cuda()
-    image = torch.randn(1, 3, 512, 512).cuda()
+    model = DeepLabv3_plus(nInputChannels=3, n_classes=21, pretrained=True, _print=True)
+    image = torch.randn(1, 3, 512, 512)
     with torch.no_grad():
         output = model.forward(image)
     print(output.size())

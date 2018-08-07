@@ -1,35 +1,79 @@
-import torch, cv2
-
-import numpy.random as random
-import numpy as np
-from dataloaders import utils
+import torch
 import math
+import numbers
+import random
+import numpy as np
 
-class FixedResize(object):
-    """Resize the image and the ground truth to specified resolution.
-    Args:
-        size: expected output size of each image
-    """
-    def __init__(self, size, flagvals=None):
-        self.size = (size, size)
-        self.flagvals = flagvals
+from PIL import Image, ImageOps
+
+class RandomCrop(object):
+    def __init__(self, size, padding=0):
+        if isinstance(size, numbers.Number):
+            self.size = (int(size), int(size))
+        else:
+            self.size = size # h, w
+        self.padding = padding
 
     def __call__(self, sample):
+        img, mask = sample['image'], sample['label']
+
+        if self.padding > 0:
+            img = ImageOps.expand(img, border=self.padding, fill=0)
+            mask = ImageOps.expand(mask, border=self.padding, fill=0)
+
+        assert img.size == mask.size
+        w, h = img.size
+        th, tw = self.size # target size
+        if w == tw and h == th:
+            return {'image': img,
+                    'label': mask}
+        if w < tw or h < th:
+            img = img.resize((tw, th), Image.BILINEAR)
+            mask = mask.resize((tw, th), Image.NEAREST)
+            return {'image': img,
+                    'label': mask}
+
+        x1 = random.randint(0, w - tw)
+        y1 = random.randint(0, h - th)
+        img = img.crop((x1, y1, x1 + tw, y1 + th))
+        mask = mask.crop((x1, y1, x1 + tw, y1 + th))
+
+        return {'image': img,
+                'label': mask}
 
 
-        elems = list(sample.keys())
+class CenterCrop(object):
+    def __init__(self, size):
+        if isinstance(size, numbers.Number):
+            self.size = (int(size), int(size))
+        else:
+            self.size = size
 
-        for elem in elems:
-            if self.flagvals is None:
-                sample[elem] = utils.fixed_resize(sample[elem], self.size)
-            else:
-                sample[elem] = utils.fixed_resize(sample[elem], self.size,
-                                                  flagval=self.flagvals[elem])
+    def __call__(self, sample):
+        img = sample['image']
+        mask = sample['label']
+        assert img.size == mask.size
+        w, h = img.size
+        th, tw = self.size
+        x1 = int(round((w - tw) / 2.))
+        y1 = int(round((h - th) / 2.))
+        img = img.crop((x1, y1, x1 + tw, y1 + th))
+        mask = mask.crop((x1, y1, x1 + tw, y1 + th))
 
-        return sample
+        return {'image': img,
+                'label': mask}
 
-    def __str__(self):
-        return 'FixedResize: '+str(self.size)
+
+class RandomHorizontalFlip(object):
+    def __call__(self, sample):
+        img = sample['image']
+        mask = sample['label']
+        if random.random() < 0.5:
+            img = img.transpose(Image.FLIP_LEFT_RIGHT)
+            mask = mask.transpose(Image.FLIP_LEFT_RIGHT)
+
+        return {'image': img,
+                'label': mask}
 
 
 class Normalize(object):
@@ -43,168 +87,150 @@ class Normalize(object):
         self.std = std
 
     def __call__(self, sample):
-        sample['image'] /= 255.0
-        sample['image'] -= self.mean
-        sample['image'] /= self.std
+        img = np.array(sample['image']).astype(np.float32)
+        mask = np.array(sample['label']).astype(np.float32)
+        img /= 255.0
+        img -= self.mean
+        img /= self.std
 
-        return sample
-
-class RandomResizedCrop(object):
-    """Crop the given Image to random size and aspect ratio.
-
-    A crop of random size (default: of 0.08 to 1.0) of the original size and a random
-    aspect ratio (default: of 3/4 to 4/3) of the original aspect ratio is made. This crop
-    is finally resized to given size.
-
-    Args:
-        size: expected output size of each image
-        scale: range of size of the origin size cropped
-        ratio: range of aspect ratio of the origin aspect ratio cropped
-    """
-
-    def __init__(self, size, scale=(0.08, 1.0), ratio=(3./4., 4./3.), flagvals=None):
-        self.size = (size, size)
-        self.scale = scale
-        self.ratio = ratio
-        self.flagvals = flagvals
-
-    @staticmethod
-    def get_params(img, scale, ratio):
-        """Get parameters for ``crop`` for a random sized crop.
-
-        Args:
-            img (np.ndarry): Image to be cropped.
-            scale (tuple): range of size of the origin size cropped
-            ratio (tuple): range of aspect ratio of the origin aspect ratio cropped
-
-        Returns:
-            tuple: params (i, j, h, w) to be passed to ``crop`` for a random
-                sized crop.
-        """
-        for attempt in range(10):
-            area = img.shape[0] * img.shape[1]
-            target_area = random.uniform(*scale) * area
-            aspect_ratio = random.uniform(*ratio)
-
-            w = int(round(math.sqrt(target_area * aspect_ratio)))
-            h = int(round(math.sqrt(target_area / aspect_ratio)))
-
-            if random.random() < 0.5:
-                w, h = h, w
-            if w < img.shape[1] and h < img.shape[0]:
-                i = random.randint(0, img.shape[0] - h)
-                j = random.randint(0, img.shape[1] - w)
-                return i, j, h, w
-
-        # Fallback
-        w = min(img.shape[0], img.shape[1])
-        i = (img.shape[0] - w) // 2
-        j = (img.shape[1] - w) // 2
-        return i, j, w, w
-
-    def __call__(self, sample):
-        i, j, h, w = self.get_params(sample['image'], self.scale, self.ratio)
-        elems = list(sample.keys())
-
-        for elem in elems:
-            if sample[elem].ndim == 2:
-                sample[elem] = sample[elem][i:i + h, j:j + w]
-            else:
-                sample[elem] = sample[elem][i:i + h, j:j + w, :]
-            if self.flagvals is None:
-                sample[elem] = utils.fixed_resize(sample[elem], self.size)
-            else:
-                sample[elem] = utils.fixed_resize(sample[elem], self.size,
-                                                  flagval=self.flagvals[elem])
-
-        return sample
-
-    def __str__(self):
-        return 'RandomResizedCrop: (size={}, scale={}, ratio={}.'.format(str(self.size),
-                                                        str(self.scale), str(self.ratio))
-
-
-class ScaleNRotate(object):
-    """Scale (zoom-in, zoom-out) and Rotate the image and the ground truth.
-    Args:
-        rots (tuple): (minimum, maximum) rotation angle
-        scales (tuple): (minimum, maximum) scale
-    """
-    def __init__(self, rots=(-30, 30), scales=(.75, 1.25)):
-        assert (isinstance(rots, type(scales)))
-        self.rots = rots
-        self.scales = scales
-
-    def __call__(self, sample):
-
-        rot = (self.rots[1] - self.rots[0]) * random.random() - \
-              (self.rots[1] - self.rots[0])/2
-
-        sc = (self.scales[1] - self.scales[0]) * random.random() - \
-                 (self.scales[1] - self.scales[0]) / 2 + 1
-
-
-        for elem in sample.keys():
-
-            tmp = sample[elem]
-
-            h, w = tmp.shape[:2]
-            center = (w / 2, h / 2)
-            assert(center != 0)  # Strange behaviour warpAffine
-
-            M = cv2.getRotationMatrix2D(center, rot, sc)
-
-            if tmp.ndim == 2 or 'gt' in elem:
-                flagval = cv2.INTER_NEAREST
-            else:
-                flagval = cv2.INTER_CUBIC
-
-            tmp = cv2.warpAffine(tmp, M, (w, h), flags=flagval)
-
-            sample[elem] = tmp
-
-        return sample
-
-    def __str__(self):
-        return 'ScaleNRotate:(rot='+str(self.rots)+',scale='+str(self.scales)+')'
-
-
-class RandomHorizontalFlip(object):
-    """Horizontally flip the given image and ground truth randomly with a probability of 0.5."""
-
-    def __call__(self, sample):
-
-        if random.random() < 0.5:
-            for elem in sample.keys():
-                tmp = sample[elem]
-                tmp = cv2.flip(tmp, flipCode=1)
-                sample[elem] = tmp
-
-        return sample
-
-    def __str__(self):
-        return 'RandomHorizontalFlip'
+        return {'image': img,
+                'label': mask}
 
 
 class ToTensor(object):
     """Convert ndarrays in sample to Tensors."""
 
     def __call__(self, sample):
+        # swap color axis because
+        # numpy image: H x W x C
+        # torch image: C X H X W
+        img = np.array(sample['image']).astype(np.float32).transpose((2, 0, 1))
+        mask = np.expand_dims(np.array(sample['label']).astype(np.float32), -1).transpose((2, 0, 1))
+        mask[mask == 255] = 0
 
-        for elem in sample.keys():
-            tmp = sample[elem].astype(np.float32)
+        img = torch.from_numpy(img).float()
+        mask = torch.from_numpy(mask).float()
 
-            if tmp.ndim == 2:
-                tmp = tmp[:, :, np.newaxis]
 
-            # swap color axis because
-            # numpy image: H x W x C
-            # torch image: C X H X W
+        return {'image': img,
+                'label': mask}
 
-            tmp = tmp.transpose((2, 0, 1))
-            sample[elem] = torch.from_numpy(tmp).float()
 
+class FixedResize(object):
+    def __init__(self, size):
+        self.size = tuple(reversed(size))  # size: (h, w)
+
+    def __call__(self, sample):
+        img = sample['image']
+        mask = sample['label']
+
+        assert img.size == mask.size
+
+        img = img.resize(self.size, Image.BILINEAR)
+        mask = mask.resize(self.size, Image.NEAREST)
+
+        return {'image': img,
+                'label': mask}
+
+
+class Scale(object):
+    def __init__(self, size):
+        self.size = size
+
+    def __call__(self, sample):
+        img = sample['image']
+        mask = sample['label']
+        assert img.size == mask.size
+        w, h = img.size
+
+        if (w >= h and w == self.size) or (h >= w and h == self.size):
+            return {'image': img,
+                    'label': mask}
+        if w > h:
+            ow = self.size
+            oh = int(self.size * h / w)
+            img = img.resize((ow, oh), Image.BILINEAR)
+            mask = mask.resize((ow, oh), Image.NEAREST)
+        else:
+            oh = self.size
+            ow = int(self.size * w / h)
+            img = img.resize((ow, oh), Image.BILINEAR)
+            mask = mask.resize((ow, oh), Image.NEAREST)
+
+        return {'image': img,
+                'label': mask}
+
+
+class RandomSizedCrop(object):
+    def __init__(self, size):
+        self.size = size
+
+    def __call__(self, sample):
+        img = sample['image']
+        mask = sample['label']
+        assert img.size == mask.size
+        for attempt in range(10):
+            area = img.size[0] * img.size[1]
+            target_area = random.uniform(0.45, 1.0) * area
+            aspect_ratio = random.uniform(0.5, 2)
+
+            w = int(round(math.sqrt(target_area * aspect_ratio)))
+            h = int(round(math.sqrt(target_area / aspect_ratio)))
+
+            if random.random() < 0.5:
+                w, h = h, w
+
+            if w <= img.size[0] and h <= img.size[1]:
+                x1 = random.randint(0, img.size[0] - w)
+                y1 = random.randint(0, img.size[1] - h)
+
+                img = img.crop((x1, y1, x1 + w, y1 + h))
+                mask = mask.crop((x1, y1, x1 + w, y1 + h))
+                assert (img.size == (w, h))
+
+                img = img.resize((self.size, self.size), Image.BILINEAR)
+                mask = mask.resize((self.size, self.size), Image.NEAREST)
+
+                return {'image': img,
+                        'label': mask}
+
+        # Fallback
+        scale = Scale(self.size)
+        crop = CenterCrop(self.size)
+        sample = crop(scale(sample))
         return sample
 
-    def __str__(self):
-        return 'ToTensor'
+
+class RandomRotate(object):
+    def __init__(self, degree):
+        self.degree = degree
+
+    def __call__(self, sample):
+        img = sample['image']
+        mask = sample['label']
+        rotate_degree = random.random() * 2 * self.degree - self.degree
+        img = img.rotate(rotate_degree, Image.BILINEAR)
+        mask = mask.rotate(rotate_degree, Image.NEAREST)
+
+        return {'image': img,
+                'label': mask}
+
+
+class RandomSized(object):
+    def __init__(self, size):
+        self.size = size
+        self.scale = Scale(self.size)
+        self.crop = RandomCrop(self.size)
+
+    def __call__(self, sample):
+        img = sample['image']
+        mask = sample['label']
+        assert img.size == mask.size
+
+        w = int(random.uniform(0.5, 2.5) * img.size[0])
+        h = int(random.uniform(0.5, 2.5) * img.size[1])
+
+        img, mask = img.resize((w, h), Image.BILINEAR), mask.resize((w, h), Image.NEAREST)
+        sample = {'image': img, 'label': mask}
+
+        return self.crop(self.scale(sample))
