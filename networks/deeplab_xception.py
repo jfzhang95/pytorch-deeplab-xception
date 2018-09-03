@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import torch.utils.model_zoo as model_zoo
 
 
+
 class SeparableConv2d(nn.Module):
     def __init__(self, inplanes, planes, kernel_size=3, stride=1, padding=0, dilation=1, bias=False):
         super(SeparableConv2d, self).__init__()
@@ -44,7 +45,7 @@ class SeparableConv2d_same(nn.Module):
 
 
 class Block(nn.Module):
-    def __init__(self, inplanes, planes, reps, stride=1, dilation=1, start_with_relu=True, grow_first=True):
+    def __init__(self, inplanes, planes, reps, stride=1, dilation=1, start_with_relu=True, grow_first=True, is_last=False):
         super(Block, self).__init__()
 
         if planes != inplanes or stride != 1:
@@ -77,7 +78,11 @@ class Block(nn.Module):
             rep = rep[1:]
 
         if stride != 1:
-            rep.append(SeparableConv2d_same(planes, planes, 3, stride=stride))
+            rep.append(SeparableConv2d_same(planes, planes, 3, stride=2))
+
+        if is_last:
+            rep.append(SeparableConv2d_same(planes, planes, 3, stride=1))
+
 
         self.rep = nn.Sequential(*rep)
 
@@ -99,8 +104,17 @@ class Xception(nn.Module):
     """
     Modified Alighed Xception
     """
-    def __init__(self, inplanes=3, pretrained=False):
+    def __init__(self, inplanes=3, os=16, pretrained=False):
         super(Xception, self).__init__()
+
+        if os == 16:
+            entry_block3_stride = 2
+            middle_block_rate = 1
+            exit_block_rates = (1, 2)
+        else:
+            entry_block3_stride = 1
+            middle_block_rate = 2  # ! Not mentioned in paper, but required
+            exit_block_rates = (2, 4)
 
         # Entry flow
         self.conv1 = nn.Conv2d(inplanes, 32, 3, stride=2, padding=1, bias=False)
@@ -112,36 +126,37 @@ class Xception(nn.Module):
 
         self.block1 = Block(64, 128, reps=2, stride=2, start_with_relu=False)
         self.block2 = Block(128, 256, reps=2, stride=2, start_with_relu=True, grow_first=True)
-        self.block3 = Block(256, 728, reps=2, stride=2, start_with_relu=True, grow_first=True)
+        self.block3 = Block(256, 728, reps=2, stride=entry_block3_stride, start_with_relu=True, grow_first=True)
 
         # Middle flow
-        self.block4  = Block(728, 728, reps=3, stride=1, start_with_relu=True, grow_first=True)
-        self.block5  = Block(728, 728, reps=3, stride=1, start_with_relu=True, grow_first=True)
-        self.block6  = Block(728, 728, reps=3, stride=1, start_with_relu=True, grow_first=True)
-        self.block7  = Block(728, 728, reps=3, stride=1, start_with_relu=True, grow_first=True)
-        self.block8  = Block(728, 728, reps=3, stride=1, start_with_relu=True, grow_first=True)
-        self.block9  = Block(728, 728, reps=3, stride=1, start_with_relu=True, grow_first=True)
-        self.block10 = Block(728, 728, reps=3, stride=1, start_with_relu=True, grow_first=True)
-        self.block11 = Block(728, 728, reps=3, stride=1, start_with_relu=True, grow_first=True)
-        self.block12 = Block(728, 728, reps=3, stride=1, start_with_relu=True, grow_first=True)
-        self.block13 = Block(728, 728, reps=3, stride=1, start_with_relu=True, grow_first=True)
-        self.block14 = Block(728, 728, reps=3, stride=1, start_with_relu=True, grow_first=True)
-        self.block15 = Block(728, 728, reps=3, stride=1, start_with_relu=True, grow_first=True)
-        self.block16 = Block(728, 728, reps=3, stride=1, start_with_relu=True, grow_first=True)
-        self.block17 = Block(728, 728, reps=3, stride=1, start_with_relu=True, grow_first=True)
-        self.block18 = Block(728, 728, reps=3, stride=1, start_with_relu=True, grow_first=True)
-        self.block19 = Block(728, 728, reps=3, stride=1, start_with_relu=True, grow_first=True)
+        self.block4  = Block(728, 728, reps=3, stride=1, dilation=middle_block_rate, start_with_relu=True, grow_first=True)
+        self.block5  = Block(728, 728, reps=3, stride=1, dilation=middle_block_rate, start_with_relu=True, grow_first=True)
+        self.block6  = Block(728, 728, reps=3, stride=1, dilation=middle_block_rate, start_with_relu=True, grow_first=True)
+        self.block7  = Block(728, 728, reps=3, stride=1, dilation=middle_block_rate, start_with_relu=True, grow_first=True)
+        self.block8  = Block(728, 728, reps=3, stride=1, dilation=middle_block_rate, start_with_relu=True, grow_first=True)
+        self.block9  = Block(728, 728, reps=3, stride=1, dilation=middle_block_rate, start_with_relu=True, grow_first=True)
+        self.block10 = Block(728, 728, reps=3, stride=1, dilation=middle_block_rate, start_with_relu=True, grow_first=True)
+        self.block11 = Block(728, 728, reps=3, stride=1, dilation=middle_block_rate, start_with_relu=True, grow_first=True)
+        self.block12 = Block(728, 728, reps=3, stride=1, dilation=middle_block_rate, start_with_relu=True, grow_first=True)
+        self.block13 = Block(728, 728, reps=3, stride=1, dilation=middle_block_rate, start_with_relu=True, grow_first=True)
+        self.block14 = Block(728, 728, reps=3, stride=1, dilation=middle_block_rate, start_with_relu=True, grow_first=True)
+        self.block15 = Block(728, 728, reps=3, stride=1, dilation=middle_block_rate, start_with_relu=True, grow_first=True)
+        self.block16 = Block(728, 728, reps=3, stride=1, dilation=middle_block_rate, start_with_relu=True, grow_first=True)
+        self.block17 = Block(728, 728, reps=3, stride=1, dilation=middle_block_rate, start_with_relu=True, grow_first=True)
+        self.block18 = Block(728, 728, reps=3, stride=1, dilation=middle_block_rate, start_with_relu=True, grow_first=True)
+        self.block19 = Block(728, 728, reps=3, stride=1, dilation=middle_block_rate, start_with_relu=True, grow_first=True)
 
         # Exit flow
-        self.block20 = Block(728, 1024, reps=2, stride=1, dilation=2, start_with_relu=True, grow_first=False)
+        self.block20 = Block(728, 1024, reps=2, stride=1, dilation=exit_block_rates[0],
+                             start_with_relu=True, grow_first=False, is_last=True)
 
-        self.conv3 = SeparableConv2d_same(1024, 1536, 3, stride=1, dilation=2)
+        self.conv3 = SeparableConv2d_same(1024, 1536, 3, stride=1, dilation=exit_block_rates[1])
         self.bn3 = nn.BatchNorm2d(1536)
 
-        self.conv4 = SeparableConv2d_same(1536, 1536, 3, stride=1, dilation=2)
+        self.conv4 = SeparableConv2d_same(1536, 1536, 3, stride=1, dilation=exit_block_rates[1])
         self.bn4 = nn.BatchNorm2d(1536)
 
-        self.conv5 = SeparableConv2d_same(1536, 2048, 3, stride=1, dilation=2)
+        self.conv5 = SeparableConv2d_same(1536, 2048, 3, stride=1, dilation=exit_block_rates[1])
         self.bn5 = nn.BatchNorm2d(2048)
 
         # Init weights
@@ -278,18 +293,23 @@ class ASPP_module(nn.Module):
 
 
 class DeepLabv3_plus(nn.Module):
-    def __init__(self, nInputChannels=3, n_classes=21, pretrained=False, _print=True):
+    def __init__(self, nInputChannels=3, n_classes=21, os=16, pretrained=False, _print=True):
         if _print:
             print("Constructing DeepLabv3+ model...")
             print("Number of classes: {}".format(n_classes))
+            print("Output stride: {}".format(os))
             print("Number of Input Channels: {}".format(nInputChannels))
         super(DeepLabv3_plus, self).__init__()
 
         # Atrous Conv
-        self.xception_features = Xception(nInputChannels, pretrained=pretrained)
+        self.xception_features = Xception(nInputChannels, os, pretrained)
 
         # ASPP
-        rates = [1, 6, 12, 18]
+        if os == 16:
+            rates = [1, 6, 12, 18]
+        else:
+            rates = [1, 12, 24, 36]
+
         self.aspp1 = ASPP_module(2048, 256, rate=rates[0])
         self.aspp2 = ASPP_module(2048, 256, rate=rates[1])
         self.aspp3 = ASPP_module(2048, 256, rate=rates[2])
@@ -300,7 +320,8 @@ class DeepLabv3_plus(nn.Module):
         self.global_avg_pool = nn.Sequential(nn.AdaptiveAvgPool2d((1, 1)),
                                              nn.Conv2d(2048, 256, 1, stride=1, bias=False),
                                              nn.BatchNorm2d(256),
-                                             nn.ReLU())
+                                             nn.ReLU()
+                                             )
 
         self.conv1 = nn.Conv2d(1280, 256, 1, bias=False)
         self.bn1 = nn.BatchNorm2d(256)
@@ -317,8 +338,8 @@ class DeepLabv3_plus(nn.Module):
                                        nn.ReLU(),
                                        nn.Conv2d(256, n_classes, kernel_size=1, stride=1))
 
-    def forward(self, x):
-        x, low_level_features = self.xception_features(x)
+    def forward(self, input):
+        x, low_level_features = self.xception_features(input)
         x1 = self.aspp1(x)
         x2 = self.aspp2(x)
         x3 = self.aspp3(x)
@@ -331,7 +352,8 @@ class DeepLabv3_plus(nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
-        x = F.upsample(x, scale_factor=4, mode='bilinear', align_corners=True)
+        x = F.upsample(x, size=(int(math.ceil(input.size()[-2]/4)),
+                                int(math.ceil(input.size()[-1]/4))), mode='bilinear', align_corners=True)
 
         low_level_features = self.conv2(low_level_features)
         low_level_features = self.bn2(low_level_features)
@@ -340,7 +362,7 @@ class DeepLabv3_plus(nn.Module):
 
         x = torch.cat((x, low_level_features), dim=1)
         x = self.last_conv(x)
-        x = F.upsample(x, scale_factor=4, mode='bilinear', align_corners=True)
+        x = F.upsample(x, size=input.size()[2:], mode='bilinear', align_corners=True)
 
         return x
 
@@ -352,9 +374,9 @@ class DeepLabv3_plus(nn.Module):
     def __init_weight(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                # n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                # m.weight.data.normal_(0, math.sqrt(2. / n))
-                torch.nn.init.kaiming_normal_(m.weight)
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+                # torch.nn.init.kaiming_normal_(m.weight)
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
@@ -386,7 +408,8 @@ def get_10x_lr_params(model):
 
 
 if __name__ == "__main__":
-    model = DeepLabv3_plus(nInputChannels=3, n_classes=21, pretrained=True, _print=True)
+    model = DeepLabv3_plus(nInputChannels=3, n_classes=21, os=8, pretrained=True, _print=True)
+    model.eval()
     image = torch.randn(1, 3, 512, 512)
     with torch.no_grad():
         output = model.forward(image)
