@@ -4,7 +4,6 @@ from datetime import datetime
 import os
 import glob
 from collections import OrderedDict
-import numpy as np
 
 # PyTorch includes
 import torch
@@ -22,15 +21,15 @@ from tensorboardX import SummaryWriter
 from dataloaders import pascal, sbd, combine_dbs
 from dataloaders import utils
 from networks import deeplab_xception
-# from dataloaders import custom_transforms as tr
 from dataloaders import custom_transforms as tr
+
 
 
 gpu_id = 0
 print('Using GPU: {} '.format(gpu_id))
 # Setting parameters
 use_sbd = True  # Whether to use SBD dataset
-nEpochs = 300  # Number of epochs for training
+nEpochs = 100  # Number of epochs for training
 resume_epoch = 0   # Default is 0, change if want to resume
 
 p = OrderedDict()  # Parameters to include in report
@@ -38,7 +37,7 @@ p['trainBatch'] = 6  # Training batch size
 testBatch = 6  # Testing batch size
 useTest = True  # See evolution of the test set when training
 nTestInterval = 5 # Run on test set every nTestInterval epochs
-snapshot = 5  # Store a model every snapshot epochs
+snapshot = 10  # Store a model every snapshot epochs
 p['nAveGrad'] = 1  # Average the gradient of several iterations
 p['lr'] = 1e-7  # Learning rate
 p['wd'] = 5e-4  # Weight decay
@@ -58,7 +57,7 @@ else:
 save_dir = os.path.join(save_dir_root, 'run', 'run_' + str(run_id))
 
 # Network definition
-net = deeplab_xception.DeepLabv3_plus(nInputChannels=3, n_classes=21, pretrained=True)
+net = deeplab_xception.DeepLabv3_plus(nInputChannels=3, n_classes=21, os=16, pretrained=True)
 modelName = 'deeplabv3+'
 criterion = utils.cross_entropy2d
 

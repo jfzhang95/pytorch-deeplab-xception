@@ -110,7 +110,7 @@ if __name__ == '__main__':
             gt = sample['label'].numpy()
             tmp = np.array(gt[jj]).astype(np.uint8)
             tmp = np.squeeze(tmp, axis=0)
-            segmap = decode_segmap(tmp)
+            segmap = decode_segmap(tmp, dataset='pascal')
             img_tmp = np.transpose(img[jj], axes=[1, 2, 0]).astype(np.uint8)
             plt.figure()
             plt.title('display')
@@ -123,35 +123,4 @@ if __name__ == '__main__':
             break
     plt.show(block=True)
 
-    # import torch
-    #
-    # composed_transforms_tr = transforms.Compose([
-    #     tr.FixedResize((512, 512)),
-    #     tr.ToTensor()
-    # ])
-    #
-    # voc_train = VOCSegmentation(split='train',
-    #                             transform=composed_transforms_tr)
-    #
-    # data_loader = DataLoader(voc_train, batch_size=1464, shuffle=False, num_workers=2)
-    #
-    # label_stat = [0] * 21
-    #
-    # for sample in data_loader:
-    #     labels = sample['label']
-    #     for i in range(0, 21):
-    #         print(i)
-    #         if i == 0:
-    #             label_stat[i] += torch.sum(labels[labels == i] + 1).item()
-    #         else:
-    #             label_stat[i] += torch.sum(labels[labels == i]).item()
-    #
-    #
-    # print(label_stat)
-    #
-    # medium = np.median(np.array(label_stat))
-    # print(medium)
-    #
-    # weight = [medium/i for i in label_stat]
-    # print(weight)
 

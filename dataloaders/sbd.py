@@ -113,7 +113,7 @@ if __name__ == '__main__':
             gt = sample['label'].numpy()
             tmp = np.array(gt[jj]).astype(np.uint8)
             tmp = np.squeeze(tmp, axis=0)
-            segmap = decode_segmap(tmp)
+            segmap = decode_segmap(tmp, dataset='pascal')
             img_tmp = np.transpose(img[jj], axes=[1, 2, 0]).astype(np.uint8)
             plt.figure()
             plt.title('display')

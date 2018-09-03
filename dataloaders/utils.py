@@ -7,6 +7,39 @@ import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 
+
+def recursive_glob(rootdir='.', suffix=''):
+    """Performs recursive glob with given suffix and rootdir
+        :param rootdir is the root directory
+        :param suffix is the suffix to be searched
+    """
+    return [os.path.join(looproot, filename)
+        for looproot, _, filenames in os.walk(rootdir)
+        for filename in filenames if filename.endswith(suffix)]
+
+def get_cityscapes_labels():
+    return np.array([
+        # [  0,   0,   0],
+        [128, 64, 128],
+        [244, 35, 232],
+        [70, 70, 70],
+        [102, 102, 156],
+        [190, 153, 153],
+        [153, 153, 153],
+        [250, 170, 30],
+        [220, 220, 0],
+        [107, 142, 35],
+        [152, 251, 152],
+        [0, 130, 180],
+        [220, 20, 60],
+        [255, 0, 0],
+        [0, 0, 142],
+        [0, 0, 70],
+        [0, 60, 100],
+        [0, 80, 100],
+        [0, 0, 230],
+        [119, 11, 32]])
+
 def get_pascal_labels():
     """Load the mapping that associates pascal classes with label colors
     Returns:
@@ -37,15 +70,15 @@ def encode_segmap(mask):
     return label_mask
 
 
-def decode_seg_map_sequence(label_masks):
+def decode_seg_map_sequence(label_masks, dataset='pascal'):
     rgb_masks = []
     for label_mask in label_masks:
-        rgb_mask = decode_segmap(label_mask)
+        rgb_mask = decode_segmap(label_mask, dataset)
         rgb_masks.append(rgb_mask)
     rgb_masks = torch.from_numpy(np.array(rgb_masks).transpose([0, 3, 1, 2]))
     return rgb_masks
 
-def decode_segmap(label_mask, plot=False):
+def decode_segmap(label_mask, dataset, plot=False):
     """Decode segmentation class labels into a color image
     Args:
         label_mask (np.ndarray): an (M,N) array of integer values denoting
@@ -55,11 +88,19 @@ def decode_segmap(label_mask, plot=False):
     Returns:
         (np.ndarray, optional): the resulting decoded color image.
     """
-    label_colours = get_pascal_labels()
+    if dataset == 'pascal':
+        n_classes = 21
+        label_colours = get_pascal_labels()
+    elif dataset == 'cityscapes':
+        n_classes = 19
+        label_colours = get_cityscapes_labels()
+    else:
+        return NotImplementedError
+
     r = label_mask.copy()
     g = label_mask.copy()
     b = label_mask.copy()
-    for ll in range(0, 21):
+    for ll in range(0, n_classes):
         r[label_mask == ll] = label_colours[ll, 0]
         g[label_mask == ll] = label_colours[ll, 1]
         b[label_mask == ll] = label_colours[ll, 2]
@@ -101,15 +142,15 @@ def lr_poly(base_lr, iter_, max_iter=100, power=0.9):
     return base_lr * ((1 - float(iter_) / max_iter) ** power)
 
 
-def get_iou(pred, gt):
+def get_iou(pred, gt, n_classes=21):
     total_miou = 0.0
     for i in range(len(pred)):
         pred_tmp = pred[i]
         gt_tmp = gt[i]
 
-        intersect = [0] * 21
-        union = [0] * 21
-        for j in range(21):
+        intersect = [0] * n_classes
+        union = [0] * n_classes
+        for j in range(n_classes):
             match = (pred_tmp == j) + (gt_tmp == j)
 
             it = torch.sum(match == 2).item()

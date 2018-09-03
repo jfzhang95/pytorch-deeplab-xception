@@ -97,6 +97,24 @@ class Normalize(object):
                 'label': mask}
 
 
+class Normalize_cityscapes(object):
+    """Normalize a tensor image with mean and standard deviation.
+    Args:
+        mean (tuple): means for each channel.
+        std (tuple): standard deviations for each channel.
+    """
+    def __init__(self, mean=(0., 0., 0.)):
+        self.mean = mean
+
+    def __call__(self, sample):
+        img = np.array(sample['image']).astype(np.float32)
+        mask = np.array(sample['label']).astype(np.float32)
+        img -= self.mean
+        img /= 255.0
+
+        return {'image': img,
+                'label': mask}
+
 class ToTensor(object):
     """Convert ndarrays in sample to Tensors."""
 
@@ -135,7 +153,10 @@ class FixedResize(object):
 
 class Scale(object):
     def __init__(self, size):
-        self.size = size
+        if isinstance(size, numbers.Number):
+            self.size = (int(size), int(size))
+        else:
+            self.size = size
 
     def __call__(self, sample):
         img = sample['image']
@@ -143,19 +164,12 @@ class Scale(object):
         assert img.size == mask.size
         w, h = img.size
 
-        if (w >= h and w == self.size) or (h >= w and h == self.size):
+        if (w >= h and w == self.size[1]) or (h >= w and h == self.size[0]):
             return {'image': img,
                     'label': mask}
-        if w > h:
-            ow = self.size
-            oh = int(self.size * h / w)
-            img = img.resize((ow, oh), Image.BILINEAR)
-            mask = mask.resize((ow, oh), Image.NEAREST)
-        else:
-            oh = self.size
-            ow = int(self.size * w / h)
-            img = img.resize((ow, oh), Image.BILINEAR)
-            mask = mask.resize((ow, oh), Image.NEAREST)
+        oh, ow = self.size
+        img = img.resize((ow, oh), Image.BILINEAR)
+        mask = mask.resize((ow, oh), Image.NEAREST)
 
         return {'image': img,
                 'label': mask}
@@ -227,10 +241,27 @@ class RandomSized(object):
         mask = sample['label']
         assert img.size == mask.size
 
-        w = int(random.uniform(0.5, 2.5) * img.size[0])
-        h = int(random.uniform(0.5, 2.5) * img.size[1])
+        w = int(random.uniform(0.8, 2.5) * img.size[0])
+        h = int(random.uniform(0.8, 2.5) * img.size[1])
 
         img, mask = img.resize((w, h), Image.BILINEAR), mask.resize((w, h), Image.NEAREST)
         sample = {'image': img, 'label': mask}
 
         return self.crop(self.scale(sample))
+
+class RandomScale(object):
+    def __init__(self, limit):
+        self.limit = limit
+
+    def __call__(self, sample):
+        img = sample['image']
+        mask = sample['label']
+        assert img.size == mask.size
+
+        scale = random.uniform(self.limit[0], self.limit[1])
+        w = int(scale * img.size[0])
+        h = int(scale * img.size[1])
+
+        img, mask = img.resize((w, h), Image.BILINEAR), mask.resize((w, h), Image.NEAREST)
+
+        return {'image': img, 'label': mask}
