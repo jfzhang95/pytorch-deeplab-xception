@@ -111,10 +111,13 @@ class Xception(nn.Module):
             entry_block3_stride = 2
             middle_block_rate = 1
             exit_block_rates = (1, 2)
-        else:
+        elif os == 8:
             entry_block3_stride = 1
-            middle_block_rate = 2  # ! Not mentioned in paper, but required
+            middle_block_rate = 2
             exit_block_rates = (2, 4)
+        else:
+            raise NotImplementedError
+
 
         # Entry flow
         self.conv1 = nn.Conv2d(inplanes, 32, 3, stride=2, padding=1, bias=False)
@@ -307,8 +310,10 @@ class DeepLabv3_plus(nn.Module):
         # ASPP
         if os == 16:
             rates = [1, 6, 12, 18]
-        else:
+        elif os == 8:
             rates = [1, 12, 24, 36]
+        else:
+            raise NotImplementedError
 
         self.aspp1 = ASPP_module(2048, 256, rate=rates[0])
         self.aspp2 = ASPP_module(2048, 256, rate=rates[1])
