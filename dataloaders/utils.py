@@ -1,6 +1,6 @@
 import os
 
-import torch, cv2
+import torch
 import random
 import numpy as np
 import torch.nn as nn
@@ -95,7 +95,7 @@ def decode_segmap(label_mask, dataset, plot=False):
         n_classes = 19
         label_colours = get_cityscapes_labels()
     else:
-        return NotImplementedError
+        raise NotImplementedError
 
     r = label_mask.copy()
     g = label_mask.copy()

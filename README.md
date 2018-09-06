@@ -8,14 +8,14 @@
 
 
 ### Introduction
-This is a Pytorch implementation of [DeepLab-V3-Plus](https://arxiv.org/pdf/1802.02611). It
+This is a PyTorch(0.4.0) implementation of [DeepLab-V3-Plus](https://arxiv.org/pdf/1802.02611). It
 can use Modified Aligned Xception and ResNet as backbone. Currently, we train DeepLab V3 Plus
 using Pascal VOC 2012, SBD and Cityscapes datasets.
 
 ![Results](doc/results.png)
 
 We trained deeplab v3+ (xception) on Pascal VOC 2012 and SBD datasets. After 50 training epoch, our
-deeplab v3+ model can reach 72.7% mIoU on Pascal VOC 2012 test set. More results will be available
+deeplab v3+ model can reach 74.4% mIoU on Pascal VOC 2012 test set. More results will be available
 soon!
 
 ### Installation
@@ -27,9 +27,18 @@ The ode was tested with Anaconda and Python 3.5. After installing the Anaconda e
     cd pytorch-deeplab-xception
     ```
 
-1. Configure your dataset path in [mypath.py](https://github.com/jfzhang95/pytorch-deeplab-xception/blob/master/mypath.py)
+1. Install dependencies:
 
-2. You can train deeplab v3+ using xception or resnet as backbone.
+    For PyTorch dependency, see [pytorch.org](https://pytorch.org/) for more details.
+
+    For custom dependencies:
+    ```Shell
+    pip install matplotlib pillow tensorboardX
+    ```
+
+2. Configure your dataset path in [mypath.py](https://github.com/jfzhang95/pytorch-deeplab-xception/blob/master/mypath.py).
+
+3. You can train deeplab v3+ using xception or resnet as backbone.
 
     To train DeepLabV3+ on Pascal VOC 2012, please do:
     ```Shell
