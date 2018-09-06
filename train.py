@@ -173,7 +173,7 @@ if resume_epoch != nEpochs:
                 optimizer.zero_grad()
                 aveGrad = 0
 
-            # Show 10 * 3 images results each batch
+            # Show 10 * 3 images results each epoch
             if ii % (num_img_tr // 10) == 0:
                 grid_image = make_grid(inputs[:3].clone().cpu().data, 3, normalize=True)
                 writer.add_image('Image', grid_image, global_step)
