@@ -16,7 +16,7 @@ using Pascal VOC 2012, SBD and Cityscapes datasets.
 
 We trained deeplab v3+ (xception) on Pascal VOC 2012 and SBD datasets. After 50 training epoch, our
 deeplab v3+ model can reach 72.7% mIoU on Pascal VOC 2012 test set. More results will be available
-soon.
+soon!
 
 ### Installation
 The ode was tested with Anaconda and Python 3.5. After installing the Anaconda environment:
@@ -27,7 +27,7 @@ The ode was tested with Anaconda and Python 3.5. After installing the Anaconda e
     cd pytorch-deeplab-xception
     ```
 
-1. You can train deeplab v3+ using xception or resnet as backbone,
+1. You can train deeplab v3+ using xception or resnet as backbone.
 
     To train DeepLabV3+ on Pascal VOC 2012, please do:
     ```Shell
