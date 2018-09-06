@@ -1,23 +1,25 @@
 # pytorch-deeplab-xception
 
+### TODO
+- [x] Basic deeplab v3+ model, using modified xception as backbone
+- [x] Training deeplab v3+ on Pascal VOC 2012, SBD, Cityscapes datasets
+- [x] Results evaluation on Pascal VOC 2012 test set
+- [x] Deeplab v3+ model using resnet as backbone
+
+
 ### Introduction
-This is a Pytorch implementation of [DeepLab-Xception](https://arxiv.org/pdf/1802.02611), It's based on a Modified Aligned Xception backbone. Currently, we train DeepLab V3+ from scratch, using Pascal Voc 2012 dataset.
+This is a Pytorch implementation of [DeepLab-V3-Plus](https://arxiv.org/pdf/1802.02611). It
+can use Modified Aligned Xception and ResNet as backbone. Currently, we train DeepLab V3 Plus
+using Pascal VOC 2012, SBD and Cityscapes datasets.
 
 ![Results](doc/results.png)
 
-We use deeplab v3+ model trained on Pascal VOC 2012 and SBD datasets to inference these results.
-After 50 training epoch, our deeplab v3+ model can reach 72.7% mIoU on Pascal VOC 2012 test set.
-
-### Requirements
-```
-Python3.x (Tested with 3.5)
-PyTorch (Tested with 0.4.0)
-tensorboardX
-opencv-python
-```
+We trained deeplab v3+ (xception) on Pascal VOC 2012 and SBD datasets. After 50 training epoch, our
+deeplab v3+ model can reach 72.7% mIoU on Pascal VOC 2012 test set. More results will be available
+soon.
 
 ### Installation
-This code is tested in Ubuntu 16.04. To use this code, please do:
+The ode was tested with Anaconda and Python 3.5. After installing the Anaconda environment:
 
 0. Clone the repo:
     ```Shell
@@ -25,16 +27,17 @@ This code is tested in Ubuntu 16.04. To use this code, please do:
     cd pytorch-deeplab-xception
     ```
 
-1. To train DeepLabV3+, please do:
+1. You can train deeplab v3+ using xception or resnet as backbone,
+
+    To train DeepLabV3+ on Pascal VOC 2012, please do:
     ```Shell
     python train.py
     ```
 
-### TODO
-- [x] Basic deeplab v3+ model
-- [x] Training deeplab v3+ on SBD dataset
-- [x] Results evaluation on Pascal VOC 2012 test set
-- [ ] Deeplab v3+ model using resnet as backbone
-- [ ] Training deeplab v3+ on other datasets
+    To train it on Cityscapes, please do:
+    ```Shell
+    python train_cityscapes.py
+    ```
+
 
 

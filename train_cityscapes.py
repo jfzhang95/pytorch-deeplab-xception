@@ -20,13 +20,13 @@ from tensorboardX import SummaryWriter
 # Custom includes
 from dataloaders import cityscapes
 from dataloaders import utils
-from networks import deeplab_xception
+from networks import deeplab_xception, deeplab_resnet
 from dataloaders import custom_transforms as tr
 
 gpu_id = 0
 print('Using GPU: {} '.format(gpu_id))
 # Setting parameters
-nEpochs = 200  # Number of epochs for training
+nEpochs = 100  # Number of epochs for training
 resume_epoch = 0  # Default is 0, change if want to resume
 
 p = OrderedDict()  # Parameters to include in report
@@ -36,10 +36,11 @@ useTest = True  # See evolution of the test set when training
 nValInterval = 5  # Run on test set every nTestInterval epochs
 snapshot = 10  # Store a model every snapshot epochs
 p['nAveGrad'] = 1  # Average the gradient of several iterations
-p['lr'] = 9e-8  # Learning rate
+p['lr'] = 1e-7  # Learning rate
 p['wd'] = 5e-4  # Weight decay
 p['momentum'] = 0.9  # Momentum
 p['epoch_size'] = 10  # How many epochs to change learning rate
+backbone = 'xception' # Use xception or resnet as feature extractor,
 
 save_dir_root = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 exp_name = os.path.dirname(os.path.abspath(__file__)).split('/')[-1]
@@ -54,8 +55,13 @@ else:
 save_dir = os.path.join(save_dir_root, 'run', 'run_' + str(run_id))
 
 # Network definition
-net = deeplab_xception.DeepLabv3_plus(nInputChannels=3, n_classes=19, os=16, pretrained=True)
-modelName = 'deeplabv3+'
+if backbone == 'xception':
+    net = deeplab_xception.DeepLabv3_plus(nInputChannels=3, n_classes=19, os=16, pretrained=True)
+elif backbone == 'resnet':
+    net = deeplab_resnet.DeepLabv3_plus(nInputChannels=3, n_classes=19, os=16, pretrained=True)
+else:
+    raise NotImplementedError
+modelName = 'deeplabv3plus-' + backbone + '-cityscapes'
 criterion = utils.cross_entropy2d
 
 if resume_epoch == 0:
@@ -166,7 +172,8 @@ if resume_epoch != nEpochs:
                 optimizer.zero_grad()
                 aveGrad = 0
 
-            if ii % (num_img_tr / 20) == 0:
+            # Show 10 * 3 images results each batch
+            if ii % (num_img_tr // 10) == 0:
                 grid_image = make_grid(inputs[:3].clone().cpu().data, 3, normalize=True)
                 writer.add_image('Image', grid_image, global_step)
                 grid_image = make_grid(
@@ -198,7 +205,6 @@ if resume_epoch != nEpochs:
 
                 loss = criterion(outputs, labels, size_average=False, batch_average=True)
                 running_loss_vl += loss.item()
-
                 total_miou += utils.get_iou(predictions, labels, 19)
 
                 # Print stuff

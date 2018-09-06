@@ -20,7 +20,7 @@ from tensorboardX import SummaryWriter
 # Custom includes
 from dataloaders import pascal, sbd, combine_dbs
 from dataloaders import utils
-from networks import deeplab_xception
+from networks import deeplab_xception, deeplab_resnet
 from dataloaders import custom_transforms as tr
 
 
@@ -43,6 +43,7 @@ p['lr'] = 1e-7  # Learning rate
 p['wd'] = 5e-4  # Weight decay
 p['momentum'] = 0.9  # Momentum
 p['epoch_size'] = 10  # How many epochs to change learning rate
+backbone = 'xception' # Use xception or resnet as feature extractor,
 
 save_dir_root = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 exp_name = os.path.dirname(os.path.abspath(__file__)).split('/')[-1]
@@ -57,8 +58,14 @@ else:
 save_dir = os.path.join(save_dir_root, 'run', 'run_' + str(run_id))
 
 # Network definition
-net = deeplab_xception.DeepLabv3_plus(nInputChannels=3, n_classes=21, os=16, pretrained=True)
-modelName = 'deeplabv3+'
+if backbone == 'xception':
+    net = deeplab_xception.DeepLabv3_plus(nInputChannels=3, n_classes=21, os=16, pretrained=True)
+elif backbone == 'resnet':
+    net = deeplab_resnet.DeepLabv3_plus(nInputChannels=3, n_classes=21, os=16, pretrained=True)
+else:
+    raise NotImplementedError
+
+modelName = 'deeplabv3plus-' + backbone + '-voc'
 criterion = utils.cross_entropy2d
 
 
@@ -166,7 +173,8 @@ if resume_epoch != nEpochs:
                 optimizer.zero_grad()
                 aveGrad = 0
 
-            if ii % (num_img_tr / 20) == 0:
+            # Show 10 * 3 images results each batch
+            if ii % (num_img_tr // 10) == 0:
                 grid_image = make_grid(inputs[:3].clone().cpu().data, 3, normalize=True)
                 writer.add_image('Image', grid_image, global_step)
                 grid_image = make_grid(utils.decode_seg_map_sequence(torch.max(outputs[:3], 1)[1].detach().cpu().numpy()), 3, normalize=False,
