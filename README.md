@@ -27,7 +27,9 @@ The ode was tested with Anaconda and Python 3.5. After installing the Anaconda e
     cd pytorch-deeplab-xception
     ```
 
-1. You can train deeplab v3+ using xception or resnet as backbone.
+1. Configure your dataset path in [mypath.py](https://github.com/jfzhang95/pytorch-deeplab-xception/blob/master/mypath.py)
+
+2. You can train deeplab v3+ using xception or resnet as backbone.
 
     To train DeepLabV3+ on Pascal VOC 2012, please do:
     ```Shell
