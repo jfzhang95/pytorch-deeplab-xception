@@ -19,7 +19,7 @@ deeplab v3+ model can reach 74.4% mIoU on Pascal VOC 2012 test set. More results
 soon!
 
 ### Installation
-The ode was tested with Anaconda and Python 3.5. After installing the Anaconda environment:
+The code was tested with Anaconda and Python 3.5. After installing the Anaconda environment:
 
 0. Clone the repo:
     ```Shell
