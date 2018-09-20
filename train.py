@@ -190,7 +190,7 @@ if resume_epoch != nEpochs:
 
         # One testing epoch
         if useTest and epoch % nTestInterval == (nTestInterval - 1):
-            total_miou = 0.0
+            total_iou = 0.0
             net.eval()
             for ii, sample_batched in enumerate(testloader):
                 inputs, labels = sample_batched['image'], sample_batched['label']
@@ -208,12 +208,12 @@ if resume_epoch != nEpochs:
                 loss = criterion(outputs, labels, size_average=False, batch_average=True)
                 running_loss_ts += loss.item()
 
-                total_miou += utils.get_iou(predictions, labels)
+                total_iou += utils.get_iou(predictions, labels)
 
                 # Print stuff
                 if ii % num_img_ts == num_img_ts - 1:
 
-                    miou = total_miou / (ii * testBatch + inputs.data.shape[0])
+                    miou = total_iou / (ii * testBatch + inputs.data.shape[0])
                     running_loss_ts = running_loss_ts / num_img_ts
 
                     print('Validation:')

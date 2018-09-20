@@ -143,7 +143,7 @@ def lr_poly(base_lr, iter_, max_iter=100, power=0.9):
 
 
 def get_iou(pred, gt, n_classes=21):
-    total_miou = 0.0
+    total_iou = 0.0
     for i in range(len(pred)):
         pred_tmp = pred[i]
         gt_tmp = gt[i]
@@ -160,13 +160,12 @@ def get_iou(pred, gt, n_classes=21):
             union[j] += un
 
         iou = []
-        unique_label = np.unique(gt_tmp.data.cpu().numpy())
-        for k in range(len(intersect)):
-            if k not in unique_label:
+        for k in range(n_classes):
+            if union[k] == 0:
                 continue
             iou.append(intersect[k] / union[k])
 
-        miou = (sum(iou) / len(iou))
-        total_miou += miou
+        img_iou = (sum(iou) / len(iou))
+        total_iou += img_iou
 
-    return total_miou
+    return total_iou

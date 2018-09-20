@@ -14,9 +14,6 @@ using Pascal VOC 2012, SBD and Cityscapes datasets.
 
 ![Results](doc/results.png)
 
-We trained deeplab v3+ (xception) on Pascal VOC 2012 and SBD datasets. After 50 training epoch, our
-deeplab v3+ model can reach 74.4% mIoU on Pascal VOC 2012 test set. More results will be available
-soon!
 
 ### Installation
 The code was tested with Anaconda and Python 3.5. After installing the Anaconda environment:
