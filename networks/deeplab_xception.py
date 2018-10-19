@@ -80,7 +80,7 @@ class Block(nn.Module):
         if stride != 1:
             rep.append(SeparableConv2d_same(planes, planes, 3, stride=2))
 
-        if is_last:
+        if stride == 1 and is_last:
             rep.append(SeparableConv2d_same(planes, planes, 3, stride=1))
 
 
@@ -129,7 +129,8 @@ class Xception(nn.Module):
 
         self.block1 = Block(64, 128, reps=2, stride=2, start_with_relu=False)
         self.block2 = Block(128, 256, reps=2, stride=2, start_with_relu=True, grow_first=True)
-        self.block3 = Block(256, 728, reps=2, stride=entry_block3_stride, start_with_relu=True, grow_first=True)
+        self.block3 = Block(256, 728, reps=2, stride=entry_block3_stride, start_with_relu=True, grow_first=True,
+                            is_last=True)
 
         # Middle flow
         self.block4  = Block(728, 728, reps=3, stride=1, dilation=middle_block_rate, start_with_relu=True, grow_first=True)
@@ -234,6 +235,7 @@ class Xception(nn.Module):
         state_dict = self.state_dict()
 
         for k, v in pretrain_dict.items():
+            print(k)
             if k in state_dict:
                 if 'pointwise' in k:
                     v = v.unsqueeze(-1).unsqueeze(-1)
@@ -241,13 +243,6 @@ class Xception(nn.Module):
                     model_dict[k.replace('block12', 'block20')] = v
                 elif k.startswith('block11'):
                     model_dict[k.replace('block11', 'block12')] = v
-                    model_dict[k.replace('block11', 'block13')] = v
-                    model_dict[k.replace('block11', 'block14')] = v
-                    model_dict[k.replace('block11', 'block15')] = v
-                    model_dict[k.replace('block11', 'block16')] = v
-                    model_dict[k.replace('block11', 'block17')] = v
-                    model_dict[k.replace('block11', 'block18')] = v
-                    model_dict[k.replace('block11', 'block19')] = v
                 elif k.startswith('conv3'):
                     model_dict[k] = v
                 elif k.startswith('bn3'):
@@ -325,8 +320,7 @@ class DeepLabv3_plus(nn.Module):
         self.global_avg_pool = nn.Sequential(nn.AdaptiveAvgPool2d((1, 1)),
                                              nn.Conv2d(2048, 256, 1, stride=1, bias=False),
                                              nn.BatchNorm2d(256),
-                                             nn.ReLU()
-                                             )
+                                             nn.ReLU())
 
         self.conv1 = nn.Conv2d(1280, 256, 1, bias=False)
         self.bn1 = nn.BatchNorm2d(256)
@@ -413,15 +407,12 @@ def get_10x_lr_params(model):
 
 
 if __name__ == "__main__":
-    model = DeepLabv3_plus(nInputChannels=3, n_classes=21, os=8, pretrained=True, _print=True)
+    model = DeepLabv3_plus(nInputChannels=3, n_classes=21, os=16, pretrained=True, _print=True)
     model.eval()
     image = torch.randn(1, 3, 512, 512)
     with torch.no_grad():
         output = model.forward(image)
     print(output.size())
-
-
-
 
 
 
