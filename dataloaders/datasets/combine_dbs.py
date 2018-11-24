@@ -2,6 +2,7 @@ import torch.utils.data as data
 
 
 class CombineDBs(data.Dataset):
+    NUM_CLASSES = 21
     def __init__(self, dataloaders, excluded=None):
         self.dataloaders = dataloaders
         self.excluded = excluded
@@ -57,27 +58,21 @@ class CombineDBs(data.Dataset):
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    from dataloaders import pascal
+    from dataloaders.datasets import pascal, sbd
     from dataloaders import sbd
     import torch
     import numpy as np
-    import dataloaders.custom_transforms as tr
     from dataloaders.utils import decode_segmap
-    from torchvision import transforms
+    import argparse
 
-    composed_transforms_tr = transforms.Compose([
-        tr.RandomHorizontalFlip(),
-        tr.RandomSized(512),
-        tr.RandomRotate(15),
-        tr.ToTensor()])
+    parser = argparse.ArgumentParser()
+    args = parser.parse_args()
+    args.base_size = 513
+    args.crop_size = 513
 
-    composed_transforms_ts = transforms.Compose([
-        tr.FixedResize(size=(512, 512)),
-        tr.ToTensor()])
-
-    pascal_voc_val = pascal.VOCSegmentation(split='val', transform=composed_transforms_ts)
-    sbd = sbd.SBDSegmentation(split=['train', 'val'], transform=composed_transforms_tr)
-    pascal_voc_train = pascal.VOCSegmentation(split='train', transform=composed_transforms_tr)
+    pascal_voc_val = pascal.VOCSegmentation(args, split='val')
+    sbd = sbd.SBDSegmentation(args, split=['train', 'val'])
+    pascal_voc_train = pascal.VOCSegmentation(args, split='train')
 
     dataset = CombineDBs([pascal_voc_train, sbd], excluded=[pascal_voc_val])
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=2, shuffle=True, num_workers=0)
@@ -87,9 +82,12 @@ if __name__ == "__main__":
             img = sample['image'].numpy()
             gt = sample['label'].numpy()
             tmp = np.array(gt[jj]).astype(np.uint8)
-            tmp = np.squeeze(tmp, axis=0)
             segmap = decode_segmap(tmp, dataset='pascal')
-            img_tmp = np.transpose(img[jj], axes=[1, 2, 0]).astype(np.uint8)
+            img_tmp = np.transpose(img[jj], axes=[1, 2, 0])
+            img_tmp *= (0.229, 0.224, 0.225)
+            img_tmp += (0.485, 0.456, 0.406)
+            img_tmp *= 255.0
+            img_tmp = img_tmp.astype(np.uint8)
             plt.figure()
             plt.title('display')
             plt.subplot(211)

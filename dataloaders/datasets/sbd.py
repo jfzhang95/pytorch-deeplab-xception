@@ -1,5 +1,4 @@
 from __future__ import print_function, division
-import json
 import os
 
 import numpy as np
@@ -8,13 +7,16 @@ import torch.utils.data as data
 from PIL import Image
 from mypath import Path
 
+from torchvision import transforms
+from dataloaders import custom_transforms as tr
 
 class SBDSegmentation(data.Dataset):
+    NUM_CLASSES = 21
 
     def __init__(self,
+                 args,
                  base_dir=Path.db_root_dir('sbd'),
                  split='train',
-                 transform=None
                  ):
         """
         :param base_dir: path to VOC dataset directory
@@ -34,9 +36,7 @@ class SBDSegmentation(data.Dataset):
             split.sort()
             self.split = split
 
-        self.transform = transform
-
-
+        self.args = args
 
         # Get list of all images from the split and check that the files exist
         self.im_ids = []
@@ -57,23 +57,15 @@ class SBDSegmentation(data.Dataset):
 
         assert (len(self.images) == len(self.categories))
 
-
-
         # Display stats
         print('Number of images: {:d}'.format(len(self.images)))
 
 
     def __getitem__(self, index):
-
         _img, _target = self._make_img_gt_point_pair(index)
-
         sample = {'image': _img, 'label': _target}
 
-
-        if self.transform is not None:
-            sample = self.transform(sample)
-
-        return sample
+        return self.transform(sample)
 
     def __len__(self):
         return len(self.images)
@@ -84,27 +76,33 @@ class SBDSegmentation(data.Dataset):
 
         return _img, _target
 
+    def transform(self, sample):
+        composed_transforms = transforms.Compose([
+            tr.RandomHorizontalFlip(),
+            tr.RandomScaleCrop(base_size=self.args.base_size, crop_size=self.args.crop_size),
+            tr.RandomGaussianBlur(),
+            tr.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+            tr.ToTensor()])
+
+        return composed_transforms(sample)
+
 
     def __str__(self):
         return 'SBDSegmentation(split=' + str(self.split) + ')'
 
 
 if __name__ == '__main__':
-    from dataloaders import custom_transforms as tr
     from dataloaders.utils import decode_segmap
     from torch.utils.data import DataLoader
-    from torchvision import transforms
     import matplotlib.pyplot as plt
+    import argparse
 
-    composed_transforms_tr = transforms.Compose([
-        tr.RandomHorizontalFlip(),
-        tr.RandomSized(512),
-        tr.RandomRotate(15),
-        tr.ToTensor()])
+    parser = argparse.ArgumentParser()
+    args = parser.parse_args()
+    args.base_size = 513
+    args.crop_size = 513
 
-    sbd_train = SBDSegmentation(split='train',
-                                transform=composed_transforms_tr)
-
+    sbd_train = SBDSegmentation(args, split='train')
     dataloader = DataLoader(sbd_train, batch_size=2, shuffle=True, num_workers=2)
 
     for ii, sample in enumerate(dataloader):
@@ -112,9 +110,12 @@ if __name__ == '__main__':
             img = sample['image'].numpy()
             gt = sample['label'].numpy()
             tmp = np.array(gt[jj]).astype(np.uint8)
-            tmp = np.squeeze(tmp, axis=0)
             segmap = decode_segmap(tmp, dataset='pascal')
-            img_tmp = np.transpose(img[jj], axes=[1, 2, 0]).astype(np.uint8)
+            img_tmp = np.transpose(img[jj], axes=[1, 2, 0])
+            img_tmp *= (0.229, 0.224, 0.225)
+            img_tmp += (0.485, 0.456, 0.406)
+            img_tmp *= 255.0
+            img_tmp = img_tmp.astype(np.uint8)
             plt.figure()
             plt.title('display')
             plt.subplot(211)
@@ -124,4 +125,5 @@ if __name__ == '__main__':
 
         if ii == 1:
             break
+
     plt.show(block=True)
