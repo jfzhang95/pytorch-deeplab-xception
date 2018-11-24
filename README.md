@@ -1,6 +1,6 @@
 # pytorch-deeplab-xception
 
-**Update on 2018/11/24. Release newest version code, which fix some previous issues and also add support for mobilenetv2 and drn. For previous version code, please check `previous` branch**  
+**Update on 2018/11/24. Release newest version code, which fix some previous issues and also add support for new backbones and multi-gpu training. For previous code, please see in `previous` branch**  
 
 ### TODO
 - [x] Basic deeplab v3+ model, using modified xception as backbone
@@ -8,6 +8,8 @@
 - [x] Results evaluation on Pascal VOC 2012 test set
 - [x] Deeplab v3+ model using ResNet as backbone
 - [x] Add MobilenetV2 and Dilated Residual Networks as backbone
+- [x] Multi-gpu training
+
 
 
 ### Introduction
@@ -66,5 +68,9 @@ Fellow steps below to train your model:
     bash train_coco.sh
     ```    
 
+### Acknowledgement
+[PyTorch-Encoding](https://github.com/zhanghang1989/PyTorch-Encoding)
 
+[Synchronized-BatchNorm-PyTorch](https://github.com/vacancy/Synchronized-BatchNorm-PyTorch)
 
+[drn](https://github.com/fyu/drn)
