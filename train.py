@@ -264,7 +264,7 @@ def main():
     if args.epochs is None:
         epoches = {
             'coco': 30,
-            'cityscapes': 240,
+            'cityscapes': 200,
             'pascal': 50,
         }
         args.epochs = epoches[args.dataset.lower()]
@@ -279,7 +279,7 @@ def main():
         lrs = {
             'coco': 0.1,
             'cityscapes': 0.01,
-            'pascal': 0.01,
+            'pascal': 0.007,
         }
         args.lr = lrs[args.dataset.lower()] / (4 * len(args.gpu_ids)) * args.batch_size
 
