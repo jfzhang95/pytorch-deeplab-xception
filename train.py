@@ -281,7 +281,8 @@ def main():
             'cityscapes': 0.01,
             'pascal': 0.01,
         }
-        args.lr = lrs[args.dataset.lower()] / len(args.gpu_ids)
+        args.lr = lrs[args.dataset.lower()] / (4 * len(args.gpu_ids)) * args.batch_size
+
 
     if args.checkname is None:
         args.checkname = 'deeplab-'+str(args.backbone)
