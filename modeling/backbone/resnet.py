@@ -47,14 +47,13 @@ class ResNet(nn.Module):
     def __init__(self, block, layers, output_stride, BatchNorm, pretrained=True):
         self.inplanes = 64
         super(ResNet, self).__init__()
+        blocks = [1, 2, 4]
         if output_stride == 16:
             strides = [1, 2, 2, 1]
             dilations = [1, 1, 1, 2]
-            blocks = [1, 2, 4]
         elif output_stride == 8:
             strides = [1, 2, 1, 1]
             dilations = [1, 1, 2, 4]
-            blocks = [1, 2, 1]
         else:
             raise NotImplementedError
 
@@ -68,8 +67,8 @@ class ResNet(nn.Module):
         self.layer1 = self._make_layer(block, 64, layers[0], stride=strides[0], dilation=dilations[0], BatchNorm=BatchNorm)
         self.layer2 = self._make_layer(block, 128, layers[1], stride=strides[1], dilation=dilations[1], BatchNorm=BatchNorm)
         self.layer3 = self._make_layer(block, 256, layers[2], stride=strides[2], dilation=dilations[2], BatchNorm=BatchNorm)
-        # self.layer4 = self._make_MG_unit(block, 512, blocks=blocks, stride=strides[3], dilation=dilations[3], BatchNorm=BatchNorm)
-        self.layer4 = self._make_layer(block, 512, layers[3], stride=strides[3], dilation=dilations[3], BatchNorm=BatchNorm)
+        self.layer4 = self._make_MG_unit(block, 512, blocks=blocks, stride=strides[3], dilation=dilations[3], BatchNorm=BatchNorm)
+        # self.layer4 = self._make_layer(block, 512, layers[3], stride=strides[3], dilation=dilations[3], BatchNorm=BatchNorm)
         self._init_weight()
 
         if pretrained:
@@ -88,11 +87,11 @@ class ResNet(nn.Module):
         layers.append(block(self.inplanes, planes, stride, dilation, downsample, BatchNorm))
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes, BatchNorm=BatchNorm))
+            layers.append(block(self.inplanes, planes, dilation=dilation, BatchNorm=BatchNorm))
 
         return nn.Sequential(*layers)
 
-    def _make_MG_unit(self, block, planes, blocks=[1, 2, 4], stride=1, dilation=1, BatchNorm=None):
+    def _make_MG_unit(self, block, planes, blocks, stride=1, dilation=1, BatchNorm=None):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
