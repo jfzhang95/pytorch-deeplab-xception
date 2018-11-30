@@ -69,7 +69,7 @@ class CityscapesSegmentation(data.Dataset):
             mask[mask == _validc] = self.class_map[_validc]
         return mask
 
-    def recursive_glob(rootdir='.', suffix=''):
+    def recursive_glob(self, rootdir='.', suffix=''):
         """Performs recursive glob with given suffix and rootdir
             :param rootdir is the root directory
             :param suffix is the suffix to be searched
