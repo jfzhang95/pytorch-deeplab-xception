@@ -190,7 +190,7 @@ class AlignedXception(nn.Module):
         x = self.relu(x)
 
         x = self.block1(x)
-        low_level_feat = x
+        low_level_feat = self.relu(x)
         x = self.block2(x)
         x = self.block3(x)
 
