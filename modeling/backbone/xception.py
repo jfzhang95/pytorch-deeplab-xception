@@ -86,7 +86,7 @@ class Block(nn.Module):
         else:
             skip = inp
 
-        x += skip
+        x = x + skip
 
         return x
 
@@ -120,7 +120,7 @@ class AlignedXception(nn.Module):
         self.bn2 = BatchNorm(64)
 
         self.block1 = Block(64, 128, reps=2, stride=2, BatchNorm=BatchNorm, start_with_relu=False)
-        self.block2 = Block(128, 256, reps=2, stride=2, BatchNorm=BatchNorm, start_with_relu=True,
+        self.block2 = Block(128, 256, reps=2, stride=2, BatchNorm=BatchNorm, start_with_relu=False,
                             grow_first=True)
         self.block3 = Block(256, 728, reps=2, stride=entry_block3_stride, BatchNorm=BatchNorm,
                             start_with_relu=True, grow_first=True, is_last=True)
@@ -190,6 +190,8 @@ class AlignedXception(nn.Module):
         x = self.relu(x)
 
         x = self.block1(x)
+        # add relu here
+        x = self.relu(x)
         low_level_feat = x
         x = self.block2(x)
         x = self.block3(x)
@@ -240,6 +242,7 @@ class AlignedXception(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
+
 
     def _load_pretrained_model(self):
         pretrain_dict = model_zoo.load_url('http://data.lip6.fr/cadene/pretrainedmodels/xception-b5690688.pth')
