@@ -48,28 +48,28 @@ class Block(nn.Module):
         filters = inplanes
         if grow_first:
             rep.append(self.relu)
-            rep.append(SeparableConv2d(inplanes, planes, 3, 1, dilation, BatchNorm))
+            rep.append(SeparableConv2d(inplanes, planes, 3, 1, dilation, BatchNorm=BatchNorm))
             rep.append(BatchNorm(planes))
             filters = planes
 
         for i in range(reps - 1):
             rep.append(self.relu)
-            rep.append(SeparableConv2d(inplanes, planes, 3, 1, dilation, BatchNorm))
+            rep.append(SeparableConv2d(filters, filters, 3, 1, dilation, BatchNorm=BatchNorm))
             rep.append(BatchNorm(filters))
 
         if not grow_first:
             rep.append(self.relu)
-            rep.append(SeparableConv2d(inplanes, planes, 3, 1, dilation, BatchNorm))
+            rep.append(SeparableConv2d(inplanes, planes, 3, 1, dilation, BatchNorm=BatchNorm))
             rep.append(BatchNorm(planes))
 
         if not start_with_relu:
             rep = rep[1:]
 
         if stride != 1:
-            rep.append(SeparableConv2d(planes, planes, 3, 2, BatchNorm))
+            rep.append(SeparableConv2d(planes, planes, 3, 2, BatchNorm=BatchNorm))
 
         if stride == 1 and is_last:
-            rep.append(SeparableConv2d(planes, planes, 3, 1, BatchNorm))
+            rep.append(SeparableConv2d(planes, planes, 3, 1, BatchNorm=BatchNorm))
 
 
         self.rep = nn.Sequential(*rep)
@@ -160,13 +160,13 @@ class AlignedXception(nn.Module):
         self.block20 = Block(728, 1024, reps=2, stride=1, dilation=exit_block_dilations[0],
                              BatchNorm=BatchNorm, start_with_relu=True, grow_first=False, is_last=True)
 
-        self.conv3 = SeparableConv2d(1024, 1536, 3, stride=1, dilation=exit_block_dilations[1])
+        self.conv3 = SeparableConv2d(1024, 1536, 3, stride=1, dilation=exit_block_dilations[1], BatchNorm=BatchNorm)
         self.bn3 = BatchNorm(1536)
 
-        self.conv4 = SeparableConv2d(1536, 1536, 3, stride=1, dilation=exit_block_dilations[1])
+        self.conv4 = SeparableConv2d(1536, 1536, 3, stride=1, dilation=exit_block_dilations[1], BatchNorm=BatchNorm)
         self.bn4 = BatchNorm(1536)
 
-        self.conv5 = SeparableConv2d(1536, 2048, 3, stride=1, dilation=exit_block_dilations[1])
+        self.conv5 = SeparableConv2d(1536, 2048, 3, stride=1, dilation=exit_block_dilations[1], BatchNorm=BatchNorm)
         self.bn5 = BatchNorm(2048)
 
         # Init weights
@@ -274,7 +274,7 @@ class AlignedXception(nn.Module):
 
 if __name__ == "__main__":
     import torch
-    model = AlignedXception(BatchNorm=nn.BatchNorm2d, pretrained=True, output_stride=8)
+    model = AlignedXception(BatchNorm=nn.BatchNorm2d, pretrained=True, output_stride=16)
     input = torch.rand(1, 3, 512, 512)
     output, low_level_feat = model(input)
     print(output.size())
