@@ -1,11 +1,21 @@
 # pytorch-deeplab-xception
 
+**Update on 2018/12/06. Provide model trained on VOC and SBD datasets.**  
+
 **Update on 2018/11/24. Release newest version code, which fix some previous issues and also add support for new backbones and multi-gpu training. For previous code, please see in `previous` branch**  
 
 ### TODO
 - [x] Support different backbones
 - [x] Support VOC, SBD, Cityscapes and COCO datasets
 - [x] Multi-GPU training
+
+
+
+| Backbone  | train/eval os  |mIoU    |Pretrained Model|
+| :-------- | :------------: |:------: |:------:|
+| ResNet    | 16/16          | 78.43%  | [google drive](https://drive.google.com/open?id=1NwcwlWqA-0HqAPk3dSNNPipGMF0iS0Zu) |
+| MobileNet | 16/16          | 70.81%  | [google drive](https://drive.google.com/open?id=1G9mWafUAj09P4KvGSRVzIsV_U5OqFLdt) |
+| DRN       | 16/16          | 78.87%  | [google drive](https://drive.google.com/open?id=131gZN_dKEXO79NknIQazPJ-4UmRrZAfI) |
 
 
 
