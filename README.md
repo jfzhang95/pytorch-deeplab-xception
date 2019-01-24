@@ -45,7 +45,7 @@ The code was tested with Anaconda and Python 3.6. After installing the Anaconda 
     pip install matplotlib pillow tensorboardX tqdm
     ```
 ### Training
-Fellow steps below to train your model:
+Follow steps below to train your model:
 
 0. Configure your dataset path in [mypath.py](https://github.com/jfzhang95/pytorch-deeplab-xception/blob/master/mypath.py).
 
