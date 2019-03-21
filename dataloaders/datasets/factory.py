@@ -22,7 +22,7 @@ class FactorySegmentation():
         self.split = split
         
     def __getitem__(self, index):
-        _img = np.array(Image.open(self.img_path[index]).convert('RGB'), dtype=np.float32)
+        _img = Image.open(self.img_path[index]).convert('RGB')
         _target = np.array(Image.open(self.label_path[index]).convert('RGB'), dtype=np.float32)
         _target = self._gen_seg_mask(_target)
         sample = {'image': _img, 'label': _target}
@@ -55,7 +55,7 @@ class FactorySegmentation():
         mask = np.where(mask==2, 2, mask)
         mask = np.where(mask==3, 3, mask)
         mask = np.where(mask==6, 4, mask)
-        return mask
+        return Image.fromarray(mask)
     
     def __len__(self):
         return len(self.img_path)
