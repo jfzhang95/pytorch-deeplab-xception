@@ -1,0 +1,10 @@
+cython
+matplotlib
+pillow
+pycocotools
+scipy
+tensorboardX
+torch
+torchvision
+tqdm
+ilabs.curate  # for scarlet dataset

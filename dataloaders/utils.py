@@ -27,6 +27,9 @@ def decode_segmap(label_mask, dataset, plot=False):
     elif dataset == 'cityscapes':
         n_classes = 19
         label_colours = get_cityscapes_labels()
+    elif dataset == 'scarlet200':
+        n_classes = 2
+        label_colours = get_scarlet_labels()
     else:
         raise NotImplementedError
 
@@ -99,3 +102,9 @@ def get_pascal_labels():
                        [64, 0, 128], [192, 0, 128], [64, 128, 128], [192, 128, 128],
                        [0, 64, 0], [128, 64, 0], [0, 192, 0], [128, 192, 0],
                        [0, 64, 128]])
+
+def get_scarlet_labels():
+    return np.asarray([
+        [0, 0, 0],
+        [128, 0, 0]
+    ])
