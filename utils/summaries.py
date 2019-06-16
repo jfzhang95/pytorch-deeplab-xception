@@ -9,7 +9,7 @@ class TensorboardSummary(object):
         self.directory = directory
 
     def create_summary(self):
-        writer = SummaryWriter(log_dir=os.path.join(self.directory))
+        writer = SummaryWriter(logdir=os.path.join(self.directory))
         return writer
 
     def visualize_image(self, writer, dataset, image, target, output, global_step):
