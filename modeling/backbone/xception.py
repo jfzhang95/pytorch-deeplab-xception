@@ -250,7 +250,7 @@ class AlignedXception(nn.Module):
         state_dict = self.state_dict()
 
         for k, v in pretrain_dict.items():
-            if k in model_dict:
+            if k in state_dict:
                 if 'pointwise' in k:
                     v = v.unsqueeze(-1).unsqueeze(-1)
                 if k.startswith('block11'):
