@@ -80,8 +80,8 @@ class Trainer(object):
                 self.model.module.load_state_dict(checkpoint['state_dict'])
             else:
                 self.model.load_state_dict(checkpoint['state_dict'])
-            if not args.ft:
-                self.optimizer.load_state_dict(checkpoint['optimizer'])
+            #if not args.ft:
+            #    self.optimizer.load_state_dict(checkpoint['optimizer'])
             self.best_pred = checkpoint['best_pred']
             print("=> loaded checkpoint '{}' (epoch {})"
                   .format(args.resume, checkpoint['epoch']))
@@ -90,6 +90,12 @@ class Trainer(object):
         if args.ft:
             args.start_epoch = 0
 
+    def q_master(self):
+        from dx_qat import QatModel
+        QatModel(self.model, loc="test", device=next(self.model.parameters()).device, custom_data=self.val_loader, dummy_input=torch.rand(1,3,513,513))
+        
+        exit(1)
+    
     def training(self, epoch):
         train_loss = 0.0
         self.model.train()
@@ -185,7 +191,7 @@ def main():
     parser.add_argument('--dataset', type=str, default='pascal',
                         choices=['pascal', 'coco', 'cityscapes'],
                         help='dataset name (default: pascal)')
-    parser.add_argument('--use-sbd', action='store_true', default=True,
+    parser.add_argument('--use-sbd', action='store_true', default=False,
                         help='whether to use SBD dataset (default: True)')
     parser.add_argument('--workers', type=int, default=4,
                         metavar='N', help='dataloader threads')
@@ -290,6 +296,11 @@ def main():
     print(args)
     torch.manual_seed(args.seed)
     trainer = Trainer(args)
+    #----------------#
+    trainer.q_master()
+    #----------------#
+    trainer.validation(0)
+    
     print('Starting Epoch:', trainer.args.start_epoch)
     print('Total Epoches:', trainer.args.epochs)
     for epoch in range(trainer.args.start_epoch, trainer.args.epochs):

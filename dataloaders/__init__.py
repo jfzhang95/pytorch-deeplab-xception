@@ -2,7 +2,7 @@ from dataloaders.datasets import cityscapes, coco, combine_dbs, pascal, sbd
 from torch.utils.data import DataLoader
 
 def make_data_loader(args, **kwargs):
-
+  
     if args.dataset == 'pascal':
         train_set = pascal.VOCSegmentation(args, split='train')
         val_set = pascal.VOCSegmentation(args, split='val')
